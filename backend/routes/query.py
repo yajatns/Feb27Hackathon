@@ -11,6 +11,7 @@ from integrations.tavily import tavily_client
 from integrations.reka import reka_client
 from integrations.yutori import yutori_client
 from integrations.neo4j_client import neo4j_client
+from agents.airbyte_agent import airbyte_agent
 
 router = APIRouter()
 
@@ -21,11 +22,17 @@ You have these tools:
 - tavily_search: Research external market data — salary benchmarks, regulatory info, industry trends
 - reka_analyze: Analyze documents or videos — resume parsing, ID verification, training video compliance
 - yutori_browse: Automate web portals with no API — insurance enrollment, government filings, benefits
+- airbyte_discover: Find available Airbyte connectors for any SaaS system (600+ supported)
+- airbyte_sync_employee: Push employee data to external systems (Notion, Salesforce, etc.)
+- airbyte_read_data: Pull data from any external system via Airbyte connectors
+- airbyte_list_connectors: List all available Airbyte connectors
 
 When a user asks something, use the right tools to answer. Chain them when needed.
-For hiring: senso_search (policies) → tavily_search (benchmarks) → decide → yutori_browse (enroll)
+For hiring: senso_search (policies) → tavily_search (benchmarks) → decide → airbyte_sync_employee (push to Notion)
+For integrations: airbyte_discover → airbyte_read_data or airbyte_sync_employee
 For compliance: tavily_search (regulations) + senso_search (internal policies) → compare
 For documents: reka_analyze → extract info → senso_search (verify against policy)
+For data sync: airbyte_discover (find connector) → airbyte_read_data (pull) or airbyte_sync_employee (push)
 
 Always explain your reasoning."""
 
@@ -57,7 +64,7 @@ TOOLS = [
             "task": {"type": "string", "description": "Plain English description of what to do on the portal"},
             "start_url": {"type": "string", "description": "URL of the portal to automate"}
         }, "required": ["task"]}}},
-]
+] + airbyte_agent.get_tools_for_orchestrator()
 
 
 async def _execute_tool(name: str, args: dict) -> dict:
@@ -81,6 +88,14 @@ async def _execute_tool(name: str, args: dict) -> dict:
             if tid:
                 return await yutori_client.wait_for_task(tid, max_polls=10)
             return result
+        elif name == "airbyte_discover":
+            return await airbyte_agent.execute("discover", {"action": "discover_connectors", "system": args.get("system", "")})
+        elif name == "airbyte_sync_employee":
+            return await airbyte_agent.execute("sync employee", {"action": "sync_employee_to_notion", "employee_data": args})
+        elif name == "airbyte_read_data":
+            return await airbyte_agent.execute("read data", {"action": "read_data", "system": args.get("system", ""), "streams": args.get("streams", [])})
+        elif name == "airbyte_list_connectors":
+            return await airbyte_agent.execute("list connectors", {"action": "discover_connectors"})
         else:
             return {"error": f"Unknown tool: {name}"}
     except Exception as e:
