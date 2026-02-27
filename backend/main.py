@@ -15,7 +15,7 @@ from integrations.tavily import tavily_client
 from integrations.reka import reka_client
 from integrations.yutori import yutori_client
 from integrations.airbyte import airbyte_client
-from routes import hire, query, graph, status
+from routes import hire, query, graph, status, override
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +82,7 @@ app.include_router(hire.router, prefix="/api", tags=["hire"])
 app.include_router(query.router, prefix="/api", tags=["query"])
 app.include_router(graph.router, prefix="/api", tags=["graph"])
 app.include_router(status.router, prefix="/api", tags=["status"])
+app.include_router(override.router, prefix="/api", tags=["override"])
 
 
 @app.get("/health")
