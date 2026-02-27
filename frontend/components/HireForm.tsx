@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { api, HireRequestCreate, HireRequest, connectStream } from '@/lib/api';
 import AgentPipeline from './AgentPipeline';
 
@@ -21,12 +22,15 @@ export default function HireForm() {
   const [pipelineSteps, setPipelineSteps] = useState<{ name: string; status: 'pending' | 'running' | 'done' | 'error'; detail?: string }[]>(
     AGENTS.map((name) => ({ name, status: 'pending' }))
   );
+  const [elapsed, setElapsed] = useState(0);
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     setError('');
     setResult(null);
+    (window as any).__hireStart = Date.now();
     setPipelineSteps(AGENTS.map((name) => ({ name, status: 'pending' as const })));
 
     // Connect WebSocket for real-time updates
@@ -65,6 +69,8 @@ export default function HireForm() {
 
       const hire = await api.hire(form);
       setResult(hire);
+      // Auto-redirect to pipeline log after 2 seconds
+      setTimeout(() => router.push(`/hire/${hire.id}`), 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit hire request');
       setPipelineSteps((prev) =>
@@ -163,11 +169,44 @@ export default function HireForm() {
       </form>
 
       {/* Pipeline Progress */}
-      {submitting && <AgentPipeline steps={pipelineSteps} />}
+      {submitting && (
+        <div className="space-y-4">
+          <div className="rounded-xl bg-[var(--bg-card)] border border-brand-500/30 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
+                <span className="text-sm font-medium text-[var(--text-primary)]">
+                  Orchestrator is delegating to specialist agents...
+                </span>
+              </div>
+              <span className="text-xs text-[var(--text-secondary)] font-mono">
+                {Math.floor((Date.now() - (window as any).__hireStart || 0) / 1000)}s
+              </span>
+            </div>
+            <p className="text-xs text-[var(--text-secondary)]">
+              Each agent is an LLM that reasons about your request, selects tools, and reports findings.
+              This typically takes 30-60 seconds as 5 AI agents work in sequence.
+            </p>
+          </div>
+          <AgentPipeline steps={pipelineSteps} />
+        </div>
+      )}
 
       {/* Result — Pipeline Log */}
       {result && (
         <div className="space-y-4">
+          {/* Navigation */}
+          <div className="flex gap-3">
+            <button onClick={() => router.push(`/hire/${result.id}`)}
+              className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition">
+              📋 View Full Pipeline Log
+            </button>
+            <button onClick={() => { setResult(null); setForm({ ...form, employee_name: '', role: '' }); }}
+              className="px-4 py-2 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-sm text-[var(--text-primary)] hover:border-brand-500/50 transition">
+              + New Hire
+            </button>
+          </div>
+
           {/* Final Verdict */}
           <div className={`rounded-xl border p-5 ${
             result.reasoning_summary?.includes('🚨') || result.reasoning_summary?.includes('BLOCK')

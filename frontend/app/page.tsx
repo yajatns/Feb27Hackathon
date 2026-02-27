@@ -72,19 +72,23 @@ export default function Dashboard() {
           ) : (
             <div className="space-y-3">
               {hires.map((h) => (
-                <div key={h.id} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
+                <Link key={h.id} href={`/hire/${h.id}`}
+                  className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0 hover:bg-[var(--bg-primary)] rounded px-2 -mx-2 transition cursor-pointer">
                   <div>
                     <div className="text-sm font-medium text-[var(--text-primary)]">{h.employee_name}</div>
-                    <div className="text-xs text-[var(--text-secondary)]">{h.role} - {h.department}</div>
+                    <div className="text-xs text-[var(--text-secondary)]">{h.role} · ${h.salary.toLocaleString()} · {h.tasks.length} agents</div>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    h.status === 'completed' ? 'bg-green-500/15 text-green-400' :
-                    h.status === 'processing' ? 'bg-blue-500/15 text-blue-400' :
-                    'bg-yellow-500/15 text-yellow-400'
-                  }`}>
-                    {h.status}
-                  </span>
-                </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      h.status === 'completed' ? 'bg-green-500/15 text-green-400' :
+                      h.status === 'processing' ? 'bg-blue-500/15 text-blue-400' :
+                      'bg-yellow-500/15 text-yellow-400'
+                    }`}>
+                      {h.status}
+                    </span>
+                    <span className="text-xs text-[var(--text-secondary)]">→</span>
+                  </div>
+                </Link>
               ))}
             </div>
           )}
