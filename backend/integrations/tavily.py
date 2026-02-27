@@ -10,9 +10,15 @@ from app.config import settings
 
 class TavilyClient:
     def __init__(self):
-        self.base_url = settings.tavily_base_url
-        self.api_key = settings.tavily_api_key
         self.client = httpx.AsyncClient(timeout=60.0)
+
+    @property
+    def api_key(self):
+        return settings.tavily_api_key
+
+    @property
+    def base_url(self):
+        return settings.tavily_base_url
 
     async def search(self, query: str, max_results: int = 5,
                      search_depth: str = "basic") -> dict:

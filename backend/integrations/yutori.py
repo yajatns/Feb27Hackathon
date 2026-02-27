@@ -11,9 +11,15 @@ from app.config import settings
 
 class YutoriClient:
     def __init__(self):
-        self.base_url = settings.yutori_base_url
-        self.api_key = settings.yutori_api_key
         self.client = httpx.AsyncClient(timeout=120.0)
+
+    @property
+    def api_key(self):
+        return settings.yutori_api_key
+
+    @property
+    def base_url(self):
+        return settings.yutori_base_url
 
     @property
     def headers(self) -> dict:

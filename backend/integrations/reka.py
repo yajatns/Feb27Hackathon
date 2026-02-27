@@ -6,9 +6,15 @@ from app.config import settings
 
 class RekaClient:
     def __init__(self):
-        self.base_url = settings.reka_base_url
-        self.api_key = settings.reka_api_key
         self.client = httpx.AsyncClient(timeout=120.0)
+
+    @property
+    def api_key(self):
+        return settings.reka_api_key
+
+    @property
+    def base_url(self):
+        return settings.reka_base_url
 
     @property
     def headers(self) -> dict:

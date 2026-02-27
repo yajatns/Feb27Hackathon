@@ -6,9 +6,15 @@ from app.config import settings
 
 class SensoClient:
     def __init__(self):
-        self.base_url = settings.senso_base_url
-        self.api_key = settings.senso_api_key
         self.client = httpx.AsyncClient(timeout=30.0)
+
+    @property
+    def api_key(self):
+        return settings.senso_api_key
+
+    @property
+    def base_url(self):
+        return settings.senso_base_url
 
     @property
     def headers(self) -> dict:
