@@ -28,15 +28,24 @@ class OpenRouterClient:
         if tools:
             payload["tools"] = tools
             payload["tool_choice"] = "auto"
-        resp = await self.client.post(
-            f"{self.base_url}/chat/completions",
-            headers={"Authorization": f"Bearer {self.api_key}",
-                     "Content-Type": "application/json",
-                     "HTTP-Referer": "https://backoffice.ai",
-                     "X-Title": "backoffice.ai"},
-            json=payload)
-        resp.raise_for_status()
-        return resp.json()
+        for attempt in range(3):
+            resp = await self.client.post(
+                f"{self.base_url}/chat/completions",
+                headers={"Authorization": f"Bearer {self.api_key}",
+                         "Content-Type": "application/json",
+                         "HTTP-Referer": "https://backoffice.ai",
+                         "X-Title": "backoffice.ai"},
+                json=payload)
+            resp.raise_for_status()
+            text = resp.text
+            if text and text.strip():
+                import json as _json
+                return _json.loads(text)
+            if attempt < 2:
+                import asyncio
+                await asyncio.sleep(1)
+        # Last resort: return a synthetic response
+        return {"choices": [{"message": {"content": "I received an empty response from the AI model. Please try again."}}]}
 
     async def structured_output(self, prompt: str, system: str = "") -> dict:
         messages = []
