@@ -104,6 +104,17 @@ class UserOverrideCreate(BaseModel):
     reason: str | None = None
 
 
+class UserOverrideResponse(BaseModel):
+    id: uuid.UUID
+    hire_request_id: uuid.UUID
+    field_overridden: str
+    original_value: str | None = None
+    new_value: str
+    reason: str | None = None
+    created_at: datetime
+    model_config = {"from_attributes": True}
+
+
 class CronResultResponse(BaseModel):
     id: uuid.UUID
     cron_type: str
