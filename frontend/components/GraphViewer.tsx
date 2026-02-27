@@ -79,19 +79,30 @@ export default function GraphViewer() {
       const vis = await import('vis-network/standalone');
       if (cancelled) return;
 
+      // Assign hierarchy levels: Orchestrator=0, Agents=1, Actions/Tools=2, everything else=3
+      const agentNames = new Set(['Orchestrator', 'Maya', 'Sam', 'Compliance', 'Alex', 'Aria']);
+      const getLevel = (n: GraphNode) => {
+        if (n.label === 'Orchestrator') return 0;
+        if (n.type === 'Agent' && agentNames.has(n.label)) return 1;
+        if (n.type === 'Action' || n.type === 'Tool') return 2;
+        return 3;
+      };
+
       const nodes = new vis.DataSet(
         graphData.nodes.map((n) => ({
           id: n.id,
-          label: n.label,
+          label: n.label.length > 30 ? n.label.substring(0, 30) + '…' : n.label,
+          level: getLevel(n),
           color: {
             background: nodeColors[n.type] || nodeColors.default,
             border: nodeColors[n.type] || nodeColors.default,
             highlight: { background: '#fff', border: nodeColors[n.type] || nodeColors.default },
           },
-          font: { color: '#e4e4ef', size: 12 },
+          font: { color: '#e4e4ef', size: n.type === 'Agent' ? 14 : 11, bold: n.type === 'Agent' },
           shape: n.type === 'Agent' ? 'dot' : n.type === 'HireRequest' ? 'diamond' : 'box',
-          size: n.type === 'Agent' ? 25 : 20,
-          title: `${n.type}: ${n.label}`,
+          size: n.label === 'Orchestrator' ? 35 : n.type === 'Agent' ? 28 : 15,
+          title: `${n.type}: ${n.label}\n${Object.entries(n.properties).map(([k,v]) => `${k}: ${String(v).substring(0,80)}`).join('\n')}`,
+          borderWidth: n.type === 'Agent' ? 3 : 1,
         }))
       );
 
@@ -112,13 +123,29 @@ export default function GraphViewer() {
         containerRef.current!,
         { nodes, edges },
         {
-          physics: {
-            solver: 'forceAtlas2Based',
-            forceAtlas2Based: { gravitationalConstant: -100, springLength: 150 },
-            stabilization: { iterations: 100 },
+          layout: {
+            hierarchical: {
+              enabled: true,
+              direction: 'UD',
+              sortMethod: 'hubsize',
+              levelSeparation: 120,
+              nodeSpacing: 180,
+              treeSpacing: 200,
+              blockShifting: true,
+              edgeMinimization: true,
+            },
           },
-          interaction: { hover: true, tooltipDelay: 200 },
-          layout: { improvedLayout: true },
+          physics: {
+            enabled: true,
+            hierarchicalRepulsion: {
+              centralGravity: 0.0,
+              springLength: 150,
+              springConstant: 0.01,
+              nodeDistance: 200,
+            },
+            stabilization: { iterations: 150 },
+          },
+          interaction: { hover: true, tooltipDelay: 200, navigationButtons: true, keyboard: true },
         }
       );
 
