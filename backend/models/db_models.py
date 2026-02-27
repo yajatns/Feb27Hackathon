@@ -4,8 +4,10 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import DateTime, Float, ForeignKey, String, Text, func
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+# Use String(36) for UUID to work with both Postgres and SQLite
+UUID_TYPE = String(36)
 
 from models.database import Base
 
@@ -13,7 +15,7 @@ from models.database import Base
 class HireRequest(Base):
     __tablename__ = "hire_requests"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[str] = mapped_column(UUID_TYPE, primary_key=True, default=lambda: str(uuid.uuid4()))
     employee_name: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(255), nullable=False)
     department: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -24,15 +26,15 @@ class HireRequest(Base):
     reasoning_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    tasks: Mapped[list["AgentTask"]] = relationship(back_populates="hire_request", cascade="all, delete-orphan")
-    overrides: Mapped[list["UserOverride"]] = relationship(back_populates="hire_request", cascade="all, delete-orphan")
+    tasks: Mapped[list["AgentTask"]] = relationship(back_populates="hire_request", cascade="all, delete-orphan", lazy="selectin")
+    overrides: Mapped[list["UserOverride"]] = relationship(back_populates="hire_request", cascade="all, delete-orphan", lazy="selectin")
 
 
 class AgentTask(Base):
     __tablename__ = "agent_tasks"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    hire_request_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("hire_requests.id"), nullable=False)
+    id: Mapped[str] = mapped_column(UUID_TYPE, primary_key=True, default=lambda: str(uuid.uuid4()))
+    hire_request_id: Mapped[str] = mapped_column(UUID_TYPE, ForeignKey("hire_requests.id"), nullable=False)
     agent_name: Mapped[str] = mapped_column(String(100), nullable=False)
     tool_used: Mapped[str] = mapped_column(String(100), nullable=False)
     input_data: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -47,7 +49,7 @@ class AgentTask(Base):
 class CronResult(Base):
     __tablename__ = "cron_results"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[str] = mapped_column(UUID_TYPE, primary_key=True, default=lambda: str(uuid.uuid4()))
     cron_type: Mapped[str] = mapped_column(String(100), nullable=False)
     findings: Mapped[str] = mapped_column(Text, nullable=False)
     recommendations: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -57,8 +59,8 @@ class CronResult(Base):
 class UserOverride(Base):
     __tablename__ = "user_overrides"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    hire_request_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("hire_requests.id"), nullable=False)
+    id: Mapped[str] = mapped_column(UUID_TYPE, primary_key=True, default=lambda: str(uuid.uuid4()))
+    hire_request_id: Mapped[str] = mapped_column(UUID_TYPE, ForeignKey("hire_requests.id"), nullable=False)
     field_overridden: Mapped[str] = mapped_column(String(100), nullable=False)
     original_value: Mapped[str] = mapped_column(Text, nullable=False)
     new_value: Mapped[str] = mapped_column(Text, nullable=False)
