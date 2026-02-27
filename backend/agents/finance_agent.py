@@ -15,19 +15,19 @@ class FinanceAgent(BaseAgent):
         location = context.get("location", "")
         salary = context.get("salary", 0)
 
-        query = f"average salary for {role} in {location} 2026"
+        # Use specialized salary benchmark method
         try:
-            research = await tavily_client.search(query, search_depth="advanced")
+            research = await tavily_client.salary_benchmark(role, location)
         except Exception as e:
-            research = {"error": str(e), "fallback": "Using provided salary as baseline"}
+            research = {"error": str(e), "fallback": f"Using proposed salary ${salary:,.0f} as baseline"}
 
         await self.log_action(
             task=f"Salary benchmark for {role} in {location}",
             result=json.dumps(research, default=str)[:1000],
-            tool="tavily_search",
+            tool="tavily_research",
             hire_request_id=hire_request_id)
 
-        return {"agent": self.name, "tool": "tavily_search", "result": research}
+        return {"agent": self.name, "tool": "tavily_research", "result": research}
 
 
 finance_agent = FinanceAgent()

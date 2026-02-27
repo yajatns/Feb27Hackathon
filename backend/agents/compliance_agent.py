@@ -15,19 +15,19 @@ class ComplianceAgent(BaseAgent):
         location = context.get("location", "California")
         role = context.get("role", "")
 
-        query = f"employment compliance requirements for {role} in {location} 2026"
+        # External regulatory check via Tavily
         try:
-            compliance_data = await tavily_client.search(query)
+            external = await tavily_client.regulatory_check(role, location)
         except Exception as e:
-            compliance_data = {"error": str(e)}
+            external = {"error": str(e)}
 
-        # Also check internal compliance policies
+        # Internal compliance policies via Senso
         try:
-            internal = await senso_client.search_policy(f"compliance checklist {role}")
+            internal = await senso_client.search_policy(f"compliance checklist {role} {location}")
         except Exception as e:
             internal = {"error": str(e)}
 
-        result = {"external": compliance_data, "internal": internal}
+        result = {"external_regulations": external, "internal_policies": internal}
         await self.log_action(
             task=f"Compliance check for {role} in {location}",
             result=json.dumps(result, default=str)[:1000],
