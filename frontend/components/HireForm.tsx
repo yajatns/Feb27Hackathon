@@ -165,37 +165,68 @@ export default function HireForm() {
       {/* Pipeline Progress */}
       {submitting && <AgentPipeline steps={pipelineSteps} />}
 
-      {/* Result */}
+      {/* Result — Pipeline Log */}
       {result && (
-        <div className="rounded-xl bg-[var(--bg-card)] border border-green-500/30 p-6 space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500" />
-            <span className="text-sm font-medium text-green-400">Hire Request Processed</span>
-          </div>
-          <div className="text-sm text-[var(--text-primary)]">
-            <strong>{result.employee_name}</strong> — {result.role}, {result.department}
-          </div>
-          <div className="text-sm text-[var(--text-secondary)]">
-            Status: {result.status}
-          </div>
-          {result.reasoning_summary && (
-            <div className="mt-3 p-4 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)]">
-              <div className="text-xs font-medium text-[var(--text-secondary)] uppercase mb-2">Reasoning Summary</div>
-              <div className="text-sm text-[var(--text-primary)] whitespace-pre-wrap">{result.reasoning_summary}</div>
+        <div className="space-y-4">
+          {/* Final Verdict */}
+          <div className={`rounded-xl border p-5 ${
+            result.reasoning_summary?.includes('🚨') || result.reasoning_summary?.includes('BLOCK')
+              ? 'bg-red-500/10 border-red-500/30'
+              : result.reasoning_summary?.includes('⚠️') || result.reasoning_summary?.includes('WARNING')
+              ? 'bg-yellow-500/10 border-yellow-500/30'
+              : 'bg-green-500/10 border-green-500/30'
+          }`}>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg">{
+                result.reasoning_summary?.includes('🚨') || result.reasoning_summary?.includes('BLOCK') ? '🚨' :
+                result.reasoning_summary?.includes('⚠️') ? '⚠️' : '✅'
+              }</span>
+              <span className="text-sm font-semibold text-[var(--text-primary)]">
+                Orchestrator Decision — {result.employee_name} as {result.role}
+              </span>
             </div>
-          )}
-          {result.tasks.length > 0 && (
-            <div className="mt-3 space-y-2">
-              <div className="text-xs font-medium text-[var(--text-secondary)] uppercase">Agent Tasks</div>
-              {result.tasks.map((t) => (
-                <div key={t.id} className="flex items-center gap-2 text-xs">
-                  <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'completed' ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                  <span className="text-[var(--text-primary)]">{t.agent_name}</span>
-                  <span className="text-[var(--text-secondary)]">via {t.tool_used}</span>
-                </div>
-              ))}
+            <div className="text-sm text-[var(--text-primary)] whitespace-pre-wrap leading-relaxed">
+              {result.reasoning_summary}
             </div>
-          )}
+          </div>
+
+          {/* Agent Pipeline Log */}
+          <div className="rounded-xl bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden">
+            <div className="px-5 py-3 border-b border-[var(--border)]">
+              <span className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">
+                Agent Pipeline Log — {result.tasks.length} agents invoked
+              </span>
+            </div>
+            <div className="divide-y divide-[var(--border)]">
+              {result.tasks.map((t) => {
+                const emoji = t.agent_name === 'Maya' ? '👩‍💼' : t.agent_name === 'Sam' ? '📊' : t.agent_name === 'Compliance' ? '⚖️' : t.agent_name === 'Alex' ? '💻' : t.agent_name === 'Aria' ? '🔗' : '🤖';
+                const hasFlag = t.output_data?.includes('🚨') || t.output_data?.includes('CRITICAL') || t.output_data?.includes('WARNING');
+                return (
+                  <details key={t.id} className="group" open={hasFlag}>
+                    <summary className="flex items-center gap-3 px-5 py-3 cursor-pointer hover:bg-[var(--bg-primary)] transition">
+                      <span className="text-lg">{emoji}</span>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-medium text-[var(--text-primary)]">{t.agent_name}</span>
+                        <span className="text-xs text-[var(--text-secondary)] ml-2">
+                          {t.tool_used ? `🔧 ${t.tool_used}` : '🧠 reasoning only'}
+                        </span>
+                      </div>
+                      <span className={`w-2 h-2 rounded-full ${
+                        t.status === 'completed' ? (hasFlag ? 'bg-yellow-500' : 'bg-green-500') : 'bg-red-500'
+                      }`} />
+                    </summary>
+                    <div className="px-5 pb-4 pl-12">
+                      {t.output_data && (
+                        <div className="text-xs text-[var(--text-primary)] whitespace-pre-wrap leading-relaxed bg-[var(--bg-primary)] rounded-lg p-3 border border-[var(--border)]">
+                          {t.output_data}
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
     </div>

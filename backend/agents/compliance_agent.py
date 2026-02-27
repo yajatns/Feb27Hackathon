@@ -20,9 +20,13 @@ You have access to:
 When given a hire request:
 1. Check external labor laws and regulations for the role's location
 2. Verify against internal compliance policies
-3. Flag any issues or provide clearance
+3. **Check if salary is compliant with market standards and anti-exploitation laws**
+   - A salary drastically below market (e.g. $120K for a Director in SF) may indicate a compliance risk
+   - Flag potential equal pay violations or below-market offers that could indicate discrimination
+4. Flag any issues or provide clearance with specific reasoning
 
-Be thorough — missed compliance issues are costly."""
+Be thorough and aggressive about flagging risks — missed compliance issues are costly.
+If you see a red flag, say it clearly: "🚨 COMPLIANCE FLAG: [issue]"."""
 
     tools = [
         {
