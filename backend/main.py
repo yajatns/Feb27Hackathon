@@ -1,6 +1,7 @@
 """backoffice.ai — FastAPI Application Entry Point"""
 
 import json
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -16,10 +17,12 @@ from integrations.yutori import yutori_client
 from integrations.airbyte import airbyte_client
 from routes import hire, query, graph, status
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup: init DB + Neo4j. Shutdown: close connections."""
+    """Startup: init DB + Neo4j schema. Shutdown: close connections."""
     # Startup
     try:
         await init_db()
@@ -30,6 +33,15 @@ async def lifespan(app: FastAPI):
     try:
         await neo4j_client.connect()
         print("✅ Neo4j connected")
+        # Setup schema + constraints
+        try:
+            from backend.graph.client import get_neo4j_driver
+            from backend.graph.schema import setup_schema
+            driver = await get_neo4j_driver()
+            await setup_schema(driver)
+            logger.info("Neo4j schema ready")
+        except Exception as exc:
+            logger.warning("Neo4j schema setup skipped: %s", exc)
     except Exception as e:
         print(f"⚠️ Neo4j not available (graph features disabled): {e}")
 
@@ -43,6 +55,11 @@ async def lifespan(app: FastAPI):
     await reka_client.close()
     await yutori_client.close()
     await airbyte_client.close()
+    try:
+        from backend.graph.client import close_neo4j_driver
+        await close_neo4j_driver()
+    except Exception:
+        pass
 
 
 app = FastAPI(
@@ -103,7 +120,6 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
-            # Echo back for now; real implementation routes to orchestrator
             await websocket.send_json({"type": "ack", "data": {"received": data}})
     except WebSocketDisconnect:
         manager.disconnect(websocket)
