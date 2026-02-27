@@ -17,7 +17,7 @@ from integrations.reka import reka_client
 from integrations.reka_vision import reka_vision
 from integrations.yutori import yutori_client
 from integrations.airbyte import airbyte_client
-from routes import hire, query, graph, status, override, sync, crons, documents
+from routes import hire, query, graph, status, override, sync, crons, documents, airbyte as airbyte_routes
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +89,7 @@ app.include_router(override.router, prefix="/api", tags=["override"])
 app.include_router(sync.router, prefix="/api", tags=["sync"])
 app.include_router(crons.router, prefix="/api", tags=["crons"])
 app.include_router(documents.router, prefix="/api", tags=["documents"])
+app.include_router(airbyte_routes.router, prefix="/api", tags=["airbyte"])
 
 
 @app.get("/health")
