@@ -36,7 +36,7 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Alex SaaS Inc</h1>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">AlexSaaS</h1>
           <p className="text-sm text-[var(--text-secondary)] mt-1">Back Office Dashboard</p>
         </div>
         <Link

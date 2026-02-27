@@ -133,40 +133,44 @@ async def process_query(request: QueryRequest):
 
     # Call LLM with tools — handle multi-turn tool calling loop
     max_rounds = 5
-    for _ in range(max_rounds):
-        response = await openrouter_client.chat(messages=messages, tools=TOOLS)
-        choice = response["choices"][0]
-        msg = choice["message"]
+    msg = {"content": "Processing complete."}
+    try:
+        for _ in range(max_rounds):
+            response = await openrouter_client.chat(messages=messages, tools=TOOLS)
+            choice = response["choices"][0]
+            msg = choice["message"]
 
-        # If no tool calls, we have the final answer
-        if not msg.get("tool_calls"):
-            break
+            # If no tool calls, we have the final answer
+            if not msg.get("tool_calls"):
+                break
 
-        # Append assistant message with tool calls
-        messages.append(msg)
+            # Append assistant message with tool calls
+            messages.append(msg)
 
-        # Execute each tool call
-        for tc in msg["tool_calls"]:
-            fn_name = tc["function"]["name"]
-            fn_args = json.loads(tc["function"]["arguments"]) if isinstance(tc["function"]["arguments"], str) else tc["function"]["arguments"]
+            # Execute each tool call
+            for tc in msg["tool_calls"]:
+                fn_name = tc["function"]["name"]
+                fn_args = json.loads(tc["function"]["arguments"]) if isinstance(tc["function"]["arguments"], str) else tc["function"]["arguments"]
 
-            result = await _execute_tool(fn_name, fn_args)
-            tools_used.append(fn_name)
+                result = await _execute_tool(fn_name, fn_args)
+                tools_used.append(fn_name)
 
-            # Log to Neo4j
-            try:
-                await neo4j_client.log_completion("Orchestrator", fn_name,
-                                                    json.dumps(result, default=str)[:500],
-                                                    fn_name, request_id)
-            except Exception:
-                pass
+                # Log to Neo4j
+                try:
+                    await neo4j_client.log_completion("Orchestrator", fn_name,
+                                                        json.dumps(result, default=str)[:500],
+                                                        fn_name, request_id)
+                except Exception:
+                    pass
 
-            # Append tool result for next LLM turn
-            messages.append({
-                "role": "tool",
-                "tool_call_id": tc["id"],
-                "content": json.dumps(result, default=str)[:3000],
-            })
+                # Append tool result for next LLM turn
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc["id"],
+                    "content": json.dumps(result, default=str)[:3000],
+                })
+    except Exception as e:
+        msg = {"content": f"I encountered an error processing your query: {str(e)}. Please try again."}
 
     # Final response
     final_text = msg.get("content", "Processing complete.")

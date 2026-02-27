@@ -3,7 +3,7 @@ import './globals.css';
 import Sidebar from '@/components/Sidebar';
 
 export const metadata: Metadata = {
-  title: 'backoffice.ai — Alex SaaS Inc',
+  title: 'AlexSaaS — powered by backoffice.ai',
   description: 'One AI that runs your entire back office',
 };
 
