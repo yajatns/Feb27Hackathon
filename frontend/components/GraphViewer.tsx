@@ -98,7 +98,7 @@ export default function GraphViewer() {
             border: nodeColors[n.type] || nodeColors.default,
             highlight: { background: '#fff', border: nodeColors[n.type] || nodeColors.default },
           },
-          font: { color: '#e4e4ef', size: n.type === 'Agent' ? 14 : 11, bold: n.type === 'Agent' },
+          font: { color: '#e4e4ef', size: n.type === 'Agent' ? 14 : 11, ...(n.type === 'Agent' ? { bold: { color: '#e4e4ef' } } : {}) },
           shape: n.type === 'Agent' ? 'dot' : n.type === 'HireRequest' ? 'diamond' : 'box',
           size: n.label === 'Orchestrator' ? 35 : n.type === 'Agent' ? 28 : 15,
           title: `${n.type}: ${n.label}\n${Object.entries(n.properties).map(([k,v]) => `${k}: ${String(v).substring(0,80)}`).join('\n')}`,
