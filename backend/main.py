@@ -13,9 +13,10 @@ from integrations.openrouter import openrouter_client
 from integrations.senso import senso_client
 from integrations.tavily import tavily_client
 from integrations.reka import reka_client
+from integrations.reka_vision import reka_vision
 from integrations.yutori import yutori_client
 from integrations.airbyte import airbyte_client
-from routes import hire, query, graph, status, override, sync, crons
+from routes import hire, query, graph, status, override, sync, crons, documents
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,7 @@ async def lifespan(app: FastAPI):
     await senso_client.close()
     await tavily_client.close()
     await reka_client.close()
+    await reka_vision.close()
     await yutori_client.close()
     await airbyte_client.close()
     try:
@@ -85,6 +87,7 @@ app.include_router(status.router, prefix="/api", tags=["status"])
 app.include_router(override.router, prefix="/api", tags=["override"])
 app.include_router(sync.router, prefix="/api", tags=["sync"])
 app.include_router(crons.router, prefix="/api", tags=["crons"])
+app.include_router(documents.router, prefix="/api", tags=["documents"])
 
 
 @app.get("/health")

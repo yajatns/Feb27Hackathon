@@ -6,6 +6,7 @@ from fastapi import APIRouter
 from models.schemas import QueryRequest, QueryResponse
 from integrations.openrouter import openrouter_client
 from integrations.senso import senso_client
+from integrations.senso_policies import search_policies, is_policy_question
 from integrations.tavily import tavily_client
 from integrations.reka import reka_client
 from integrations.yutori import yutori_client
@@ -63,7 +64,7 @@ async def _execute_tool(name: str, args: dict) -> dict:
     """Execute a tool call with the real API client."""
     try:
         if name == "senso_search":
-            return await senso_client.search_policy(args.get("query", ""))
+            return await search_policies(args.get("query", ""))
         elif name == "tavily_search":
             return await tavily_client.search(args.get("query", ""),
                                                search_depth=args.get("search_depth", "basic"))
@@ -91,8 +92,27 @@ async def process_query(request: QueryRequest):
     """Process a plain English query using OpenRouter function calling."""
     request_id = str(uuid.uuid4())
     tools_used = []
+
+    # Route policy questions to Senso first, then augment with LLM reasoning
+    policy_context = ""
+    if await is_policy_question(request.message):
+        policy_result = await search_policies(request.message, top_k=5)
+        tools_used.append("senso_search")
+        policy_context = (
+            f"\n\n[POLICY CONTEXT from Senso — categories: {', '.join(policy_result['categories'])}]\n"
+            f"{policy_result['context_summary']}\n"
+            f"[END POLICY CONTEXT]\n"
+        )
+        try:
+            await neo4j_client.log_completion("Orchestrator", "senso_policy_prefetch",
+                                                policy_result["context_summary"][:500],
+                                                "senso_search", request_id)
+        except Exception:
+            pass
+
+    system_content = SYSTEM_PROMPT + policy_context
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": system_content},
         {"role": "user", "content": request.message},
     ]
 
