@@ -8,20 +8,22 @@
 
 **[Open dashboard → Hire page]**
 
-> "Meet backoffice.ai. One AI orchestrator that manages your entire back office."
+> "Meet backoffice.ai. A CEO just tells the AI what they need — and an autonomous orchestrator handles everything."
 
-> "Let's say HR needs to hire a senior engineer. Instead of juggling 5 different tools, you just tell the AI what you need."
+> "Let's hire a Product Designer. I just describe what I want."
 
-**[Fill hire form: "Sarah Chen", Senior Engineer, Engineering, $180,000, San Francisco]**
+**[Fill hire form: "Jane Kim", Product Designer, Design, $155,000, San Francisco]**
 **[Click Submit → Watch agent pipeline animate]**
 
-> "Watch what happens. The orchestrator breaks this into specialist tasks and delegates to AI agents — each an expert in their domain."
+> "The Orchestrator is an LLM that DECIDES what to do. It's not scripted — it reasons about which specialist agents to call."
 
-> "Maya researches salary benchmarks via Tavily deep search. Sam checks our internal policies through Senso — our self-improving policy engine. Compliance verifies everything meets regulatory requirements. Alex provisions accounts and onboards."
+> "It delegates to Maya, who uses her OWN LLM to reason about HR policies, calling Senso's API. Then Sam — another LLM — researches real salary data via Tavily. He found the market average is $157,850 and recommended bumping to $160K."
 
-**[Point to pipeline: Maya ✅ → Sam ✅ → Compliance ✅ → Alex ✅]**
+> "Each agent is autonomous. They choose their own tools, reason about the results, and report back. The orchestrator synthesizes everything into a GO/NO-GO."
 
-> "Four agents. Four tools. One conversation. The hire is processed end-to-end."
+**[Point to pipeline: Maya ✅ → Sam ✅ → Compliance ✅ → Alex ✅ → Aria ✅]**
+
+> "Five AI agents. Ten tool calls. Real data. One conversation."
 
 ---
 
@@ -67,9 +69,9 @@
 
 ## Closing (15 seconds)
 
-> "backoffice.ai. One AI orchestrator. Real integrations — Senso, Reka, Tavily, Yutori, Airbyte, OpenRouter, Render, Notion. Zero mocks. A self-improving system that gets smarter with every human decision."
+> "backoffice.ai. One AI orchestrator, five autonomous specialist agents, all powered by OpenRouter. Real integrations — Senso, Reka, Tavily, Yutori, Airbyte, Render, Notion. Zero mocks. Every agent reasons with LLM function calling. A self-improving system that gets smarter with every human decision."
 
-> "Your back office, on autopilot."
+> "Your CEO talks. The AI handles the back office."
 
 ---
 
