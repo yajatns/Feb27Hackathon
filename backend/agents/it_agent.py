@@ -1,4 +1,4 @@
-"""Alex — IT Agent. Handles account provisioning, portal automation, benefits."""
+"""Alex — IT Agent. AI agent for account provisioning using Yutori portal automation."""
 
 import json
 from agents.base import BaseAgent
@@ -7,34 +7,85 @@ from integrations.yutori import yutori_client
 
 class ITAgent(BaseAgent):
     name = "Alex"
-    description = "IT specialist — account provisioning, portal automation, benefits enrollment"
-    tools = ["yutori_browse"]
+    role = "IT Specialist"
+    system_prompt = """You are Alex, the IT Specialist agent at backoffice.ai.
+Your job is to provision employee accounts, set up benefits enrollment,
+and automate portal interactions for new hires.
 
-    async def execute(self, task: str, context: dict, hire_request_id: str) -> dict:
-        employee_name = context.get("employee_name", "")
-        start_date = context.get("start_date", "")
-        location = context.get("location", "")
+You have access to Yutori — a portal automation API that can navigate
+web portals, fill forms, and complete enrollment processes.
 
-        # Use specialized benefits enrollment
-        try:
-            task_result = await yutori_client.enroll_benefits(
-                employee_name=employee_name, start_date=start_date)
-            task_id = task_result.get("id", task_result.get("task_id", ""))
-            if task_id:
-                result = await yutori_client.wait_for_task(task_id, max_polls=10)
-            else:
-                result = task_result
-        except Exception as e:
-            result = {"error": str(e), "fallback": "Manual enrollment required",
-                      "employee": employee_name, "start_date": start_date}
+When given a hire request:
+1. Initiate benefits enrollment for the new employee
+2. Check the enrollment status
+3. Report what was provisioned and any manual steps needed
 
-        await self.log_action(
-            task=f"Benefits enrollment for {employee_name}",
-            result=json.dumps(result, default=str)[:1000],
-            tool="yutori_browse",
-            hire_request_id=hire_request_id)
+Be specific about what systems were set up and what's pending."""
 
-        return {"agent": self.name, "tool": "yutori_browse", "result": result}
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "enroll_benefits",
+                "description": "Initiate employee benefits enrollment by automating the benefits portal via Yutori. Handles health insurance, 401k, and other standard benefits.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "employee_name": {"type": "string", "description": "Full name of the employee"},
+                        "start_date": {"type": "string", "description": "Employment start date"},
+                        "benefits_tier": {"type": "string", "description": "Benefits tier: standard, premium, executive", "default": "standard"}
+                    },
+                    "required": ["employee_name", "start_date"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "provision_accounts",
+                "description": "Set up IT accounts and access credentials for a new employee — email, Slack, Jira, GitHub, etc.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "employee_name": {"type": "string", "description": "Full name of the employee"},
+                        "department": {"type": "string", "description": "Department for access provisioning"},
+                        "role": {"type": "string", "description": "Role for permission levels"}
+                    },
+                    "required": ["employee_name", "department"]
+                }
+            }
+        }
+    ]
+
+    async def _execute_tool(self, tool_name: str, args: dict, context: dict, hire_request_id: str) -> dict:
+        if tool_name == "enroll_benefits":
+            try:
+                result = await yutori_client.enroll_benefits(
+                    employee_name=args["employee_name"],
+                    start_date=args.get("start_date", context.get("start_date", "")))
+                task_id = result.get("id", result.get("task_id", ""))
+                if task_id:
+                    status = await yutori_client.wait_for_task(task_id, max_polls=5)
+                    return {"source": "yutori", "enrollment": status}
+                return {"source": "yutori", "enrollment": result}
+            except Exception as e:
+                return {"source": "yutori", "error": str(e),
+                        "fallback": {"status": "pending_manual",
+                                     "employee": args["employee_name"],
+                                     "action_needed": "Manual benefits portal enrollment required"}}
+
+        elif tool_name == "provision_accounts":
+            # Simulate account provisioning (would connect to real identity provider)
+            return {"source": "internal",
+                    "provisioned": {
+                        "email": f"{args['employee_name'].lower().replace(' ', '.')}@alexsaas.com",
+                        "slack": "Invited",
+                        "jira": f"Added to {args.get('department', 'General')} board",
+                        "github": f"Added to {args.get('department', 'General').lower()} team",
+                        "status": "completed"
+                    }}
+
+        return {"error": f"Unknown tool: {tool_name}"}
 
 
 it_agent = ITAgent()

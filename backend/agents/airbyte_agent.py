@@ -86,7 +86,7 @@ class AirbyteSpecialistAgent(BaseAgent):
     def __init__(self):
         self.connector_manager = AirbyteConnectorManager()
 
-    async def execute(self, task: str, context: dict[str, Any] | None = None) -> dict:
+    async def execute(self, task: str, context: dict[str, Any] | None = None, hire_request_id: str = "") -> dict:
         """Execute an Airbyte integration task."""
         context = context or {}
         action = context.get("action", self._classify_task(task))

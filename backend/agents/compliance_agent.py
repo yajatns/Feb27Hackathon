@@ -1,4 +1,4 @@
-"""Compliance Agent — regulatory monitoring and policy enforcement."""
+"""Compliance Agent — AI agent for regulatory monitoring using Tavily + Senso."""
 
 import json
 from agents.base import BaseAgent
@@ -8,33 +8,74 @@ from integrations.senso import senso_client
 
 class ComplianceAgent(BaseAgent):
     name = "Compliance"
-    description = "Regulatory monitoring, policy enforcement, labor law compliance"
-    tools = ["tavily_search", "senso_search"]
+    role = "Compliance Officer"
+    system_prompt = """You are the Compliance Officer agent at backoffice.ai.
+Your job is to verify that hiring decisions comply with labor laws, company policies,
+and regulatory requirements.
 
-    async def execute(self, task: str, context: dict, hire_request_id: str) -> dict:
-        location = context.get("location", "California")
-        role = context.get("role", "")
+You have access to:
+- Tavily: Real-time web research for current labor laws and regulations
+- Senso: Company's internal compliance policies and checklists
 
-        # External regulatory check via Tavily
-        try:
-            external = await tavily_client.regulatory_check(role, location)
-        except Exception as e:
-            external = {"error": str(e)}
+When given a hire request:
+1. Check external labor laws and regulations for the role's location
+2. Verify against internal compliance policies
+3. Flag any issues or provide clearance
 
-        # Internal compliance policies via Senso
-        try:
-            internal = await senso_client.search_policy(f"compliance checklist {role} {location}")
-        except Exception as e:
-            internal = {"error": str(e)}
+Be thorough — missed compliance issues are costly."""
 
-        result = {"external_regulations": external, "internal_policies": internal}
-        await self.log_action(
-            task=f"Compliance check for {role} in {location}",
-            result=json.dumps(result, default=str)[:1000],
-            tool="tavily+senso",
-            hire_request_id=hire_request_id)
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "check_labor_regulations",
+                "description": "Research current labor laws, minimum wage, and employment regulations for a specific location and role type using Tavily.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "role": {"type": "string", "description": "Job role/title"},
+                        "location": {"type": "string", "description": "City/state for regulatory lookup"}
+                    },
+                    "required": ["location"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "check_internal_compliance",
+                "description": "Search company's internal compliance policies and checklists via Senso.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Compliance policy search query"}
+                    },
+                    "required": ["query"]
+                }
+            }
+        }
+    ]
 
-        return {"agent": self.name, "tool": "tavily+senso", "result": result}
+    async def _execute_tool(self, tool_name: str, args: dict, context: dict, hire_request_id: str) -> dict:
+        if tool_name == "check_labor_regulations":
+            try:
+                result = await tavily_client.regulatory_check(
+                    args.get("role", context.get("role", "")),
+                    args["location"])
+                return {"source": "tavily", "location": args["location"], "regulations": result}
+            except Exception as e:
+                return {"source": "tavily", "error": str(e),
+                        "fallback": "Standard federal + state employment law applies"}
+
+        elif tool_name == "check_internal_compliance":
+            try:
+                result = await senso_client.search_policy(args["query"])
+                return {"source": "senso", "query": args["query"], "policies": result}
+            except Exception as e:
+                return {"source": "senso", "error": str(e),
+                        "fallback": "Using standard compliance checklist"}
+
+        return {"error": f"Unknown tool: {tool_name}"}
 
 
 compliance_agent = ComplianceAgent()
