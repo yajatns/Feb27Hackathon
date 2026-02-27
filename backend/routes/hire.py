@@ -1,8 +1,8 @@
-"""POST /api/hire — orchestrate full employee onboarding with real tool calling."""
+"""POST /api/hire — AI Orchestrator agent coordinates specialist agents for hiring."""
 
 import json
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, WebSocket
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,33 +13,32 @@ from agents.hr_agent import hr_agent
 from agents.finance_agent import finance_agent
 from agents.it_agent import it_agent
 from agents.compliance_agent import compliance_agent
-from agents.marketing_agent import marketing_agent
 from integrations.openrouter import openrouter_client
 from integrations.neo4j_client import neo4j_client
 
 router = APIRouter()
 
-HIRE_SYSTEM = """You are the backoffice.ai hiring orchestrator. You coordinate a multi-agent pipeline for employee onboarding.
+# The orchestrator is itself an AI agent — it reasons about what to do
+ORCHESTRATOR_PERSONA = """You are the backoffice.ai Orchestrator — an AI agent that coordinates specialist agents to handle business operations.
 
-Given a hire request, execute this pipeline IN ORDER:
-1. Maya (HR Agent) — look up company salary band and HR policies via Senso
-2. Sam (Finance Agent) — research market salary benchmarks via Tavily
-3. Compare internal policy vs market data, adjust salary if needed with reasoning
-4. Compliance Agent — check regulatory requirements for role + location
-5. Alex (IT Agent) — set up benefits enrollment via Yutori (web portals)
+You have a team of specialist AI agents, each with their own tools and expertise:
+- **Maya** (HR Specialist): Searches company policies and salary bands via Senso
+- **Sam** (Finance Analyst): Researches market salary data via Tavily deep search
+- **Compliance Officer**: Checks labor laws and internal compliance via Tavily + Senso
+- **Alex** (IT Operations): Provisions accounts and enrolls benefits via Yutori portal automation
+- **Aria** (Integration Specialist): Connects to 600+ SaaS systems via Airbyte
 
-After all agents complete, summarize:
-- Final salary decision (and reasoning if adjusted)
-- Compliance status
-- Benefits enrollment status
-- Any flags or recommendations
+For each hire request, you coordinate the team:
+1. Dispatch each specialist to their task
+2. Review their findings
+3. Synthesize a final recommendation with clear reasoning
 
-Be specific about WHAT each agent found and WHY decisions were made."""
+You are NOT just running scripts — you are an AI making decisions about how to onboard an employee."""
 
 
 @router.post("/hire", response_model=HireRequestResponse)
 async def create_hire_request(request: HireRequestCreate, db: AsyncSession = Depends(get_db)):
-    """Create a new hire request and run the full agent pipeline."""
+    """Create a new hire request — the AI orchestrator coordinates all specialist agents."""
     hire = HireRequest(
         employee_name=request.employee_name, role=request.role,
         department=request.department, salary=request.salary,
@@ -49,69 +48,90 @@ async def create_hire_request(request: HireRequestCreate, db: AsyncSession = Dep
 
     context = request.model_dump()
     hrid = str(hire.id)
-    all_results = []
+    agent_responses = []
 
-    # Run agents in sequence: HR → Finance → Compliance → IT
-    agents = [
-        ("Maya", hr_agent, "HR policy lookup"),
-        ("Sam", finance_agent, "Salary benchmarking"),
-        ("Compliance", compliance_agent, "Regulatory check"),
-        ("Alex", it_agent, "Benefits enrollment"),
+    # Each specialist agent is an LLM that reasons about its task
+    specialists = [
+        ("Maya", hr_agent, f"Look up company HR policies and salary bands for hiring a {request.role} in {request.department} at {request.location}. The proposed salary is ${request.salary:,.0f}. Determine if this fits within our policy."),
+        ("Sam", finance_agent, f"Research current market salary data for a {request.role} in {request.location}. The proposed salary is ${request.salary:,.0f}. Is this competitive? Provide data-backed analysis."),
+        ("Compliance", compliance_agent, f"Check regulatory compliance requirements for hiring a {request.role} in {request.location} starting {request.start_date}. What labor laws, benefits requirements, and compliance steps apply?"),
+        ("Alex", it_agent, f"Set up benefits enrollment and account provisioning for {request.employee_name}, starting {request.start_date} in {request.location}. Provision health insurance, 401k, and IT accounts."),
     ]
 
-    for agent_name, agent, description in agents:
+    for agent_name, agent, task_description in specialists:
         try:
-            # Log delegation to Neo4j
+            # Log delegation in Neo4j
             try:
+                if neo4j_client._driver is None:
+                    await neo4j_client.connect()
                 await neo4j_client.log_delegation(
-                    "Orchestrator", agent_name, description,
-                    f"{description} for {request.employee_name} ({request.role}, ${request.salary:,.0f}, {request.location})",
+                    "Orchestrator", agent_name, task_description[:100],
+                    f"Orchestrator dispatched {agent_name} for {request.employee_name}",
                     hrid)
             except Exception:
                 pass
 
-            result = await agent.execute(task=description, context=context, hire_request_id=hrid)
-            all_results.append({"agent": agent_name, "status": "completed", **result})
+            # Agent reasons using LLM + tools
+            result = await agent.execute(task=task_description, context=context, hire_request_id=hrid)
+            agent_responses.append(result)
 
+            # Log completion in Neo4j
+            try:
+                await neo4j_client.log_completion(
+                    agent_name=agent_name,
+                    task=task_description[:100],
+                    result=result.get("reasoning", "")[:500],
+                    tool_used=",".join(t["tool"] for t in result.get("tool_calls_made", [])) or "reasoning",
+                    hire_request_id=hrid)
+            except Exception:
+                pass
+
+            # Store in DB
             task = AgentTask(
                 hire_request_id=hire.id, agent_name=agent_name,
-                tool_used=result.get("tool", "unknown"),
-                input_data=json.dumps(context),
-                output_data=json.dumps(result.get("result", {}), default=str)[:5000],
+                tool_used=",".join(t["tool"] for t in result.get("tool_calls_made", [])) or "llm_reasoning",
+                input_data=task_description,
+                output_data=json.dumps(result, default=str)[:5000],
                 status="completed",
                 started_at=datetime.now(timezone.utc), completed_at=datetime.now(timezone.utc))
             db.add(task)
 
         except Exception as e:
-            all_results.append({"agent": agent_name, "status": "failed", "error": str(e)})
+            agent_responses.append({"agent": agent_name, "error": str(e)})
             task = AgentTask(
                 hire_request_id=hire.id, agent_name=agent_name,
-                tool_used="error", input_data=json.dumps(context),
+                tool_used="error", input_data=task_description,
                 output_data=str(e), status="failed",
                 started_at=datetime.now(timezone.utc), completed_at=datetime.now(timezone.utc))
             db.add(task)
 
-    # Generate final reasoning summary via LLM
+    # Orchestrator agent synthesizes all specialist responses
     try:
-        summary_resp = await openrouter_client.chat(
+        synthesis = await openrouter_client.chat(
             messages=[
-                {"role": "system", "content": HIRE_SYSTEM},
-                {"role": "user", "content": f"""Hire request for {request.employee_name}:
-- Role: {request.role}
-- Department: {request.department}
+                {"role": "system", "content": ORCHESTRATOR_PERSONA},
+                {"role": "user", "content": f"""I need to finalize the hiring decision for:
+- Candidate: {request.employee_name}
+- Role: {request.role} in {request.department}
 - Proposed Salary: ${request.salary:,.0f}
 - Location: {request.location}
 - Start Date: {request.start_date}
 
-Agent results:
-{json.dumps(all_results, default=str)[:4000]}
+Here are the reports from my specialist agents:
 
-Provide the final reasoning summary."""}
+{json.dumps(agent_responses, default=str)[:6000]}
+
+Based on all agent findings, provide:
+1. Final salary recommendation (with reasoning)
+2. Compliance status (clear/blocked/needs review)
+3. Benefits & provisioning status
+4. Any risks or flags
+5. Final GO/NO-GO recommendation"""}
             ],
-            max_tokens=800)
-        reasoning = summary_resp["choices"][0]["message"]["content"]
+            max_tokens=1200)
+        reasoning = synthesis["choices"][0]["message"]["content"]
     except Exception as e:
-        reasoning = f"Pipeline completed with {len(all_results)} agent steps. Error generating summary: {e}"
+        reasoning = f"Pipeline completed with {len(agent_responses)} agent reports. Synthesis error: {e}"
 
     hire.status = "completed"
     hire.reasoning_summary = reasoning

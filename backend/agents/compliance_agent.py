@@ -1,40 +1,71 @@
-"""Compliance Agent — regulatory monitoring and policy enforcement."""
+"""Compliance Agent — AI-powered regulatory compliance checker with LLM reasoning."""
 
-import json
-from agents.base import BaseAgent
+from agents.llm_agent import LLMAgent
 from integrations.tavily import tavily_client
 from integrations.senso import senso_client
 
 
-class ComplianceAgent(BaseAgent):
+class ComplianceAgent(LLMAgent):
     name = "Compliance"
-    description = "Regulatory monitoring, policy enforcement, labor law compliance"
-    tools = ["tavily_search", "senso_search"]
+    role = "Compliance Officer"
+    persona = """You are the AI Compliance Officer at backoffice.ai.
 
-    async def execute(self, task: str, context: dict, hire_request_id: str) -> dict:
-        location = context.get("location", "California")
-        role = context.get("role", "")
+Your job is to ensure all hiring decisions comply with labor laws and company policies.
+You have access to:
+- Tavily: for researching current labor laws, regulations, and compliance requirements
+- Senso: for checking internal compliance policies and checklists
 
-        # External regulatory check via Tavily
-        try:
-            external = await tavily_client.regulatory_check(role, location)
-        except Exception as e:
-            external = {"error": str(e)}
+When given a hire request:
+1. Research labor laws for the location (state/city employment laws)
+2. Check internal compliance policies
+3. Identify any regulatory requirements (benefits, equal pay, etc.)
+4. Flag any compliance risks or required actions
 
-        # Internal compliance policies via Senso
-        try:
-            internal = await senso_client.search_policy(f"compliance checklist {role} {location}")
-        except Exception as e:
-            internal = {"error": str(e)}
+Be thorough — missing a compliance requirement can be costly."""
 
-        result = {"external_regulations": external, "internal_policies": internal}
-        await self.log_action(
-            task=f"Compliance check for {role} in {location}",
-            result=json.dumps(result, default=str)[:1000],
-            tool="tavily+senso",
-            hire_request_id=hire_request_id)
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "research_regulations",
+                "description": "Research employment regulations, labor laws, and compliance requirements for a specific role and location.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Regulatory research query"}
+                    },
+                    "required": ["query"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "check_internal_compliance",
+                "description": "Search internal compliance policies and checklists via Senso.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Internal compliance policy query"}
+                    },
+                    "required": ["query"]
+                }
+            }
+        }
+    ]
 
-        return {"agent": self.name, "tool": "tavily+senso", "result": result}
+    async def _execute_tool(self, name: str, args: dict) -> dict:
+        if name == "research_regulations":
+            try:
+                return await tavily_client.regulatory_check(args["query"], "")
+            except Exception as e:
+                return {"error": str(e)}
+        elif name == "check_internal_compliance":
+            try:
+                return await senso_client.search_policy(args["query"])
+            except Exception as e:
+                return {"error": str(e)}
+        return {"error": f"Unknown tool: {name}"}
 
 
 compliance_agent = ComplianceAgent()
