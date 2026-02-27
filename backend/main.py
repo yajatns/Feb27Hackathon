@@ -91,6 +91,9 @@ app.include_router(crons.router, prefix="/api", tags=["crons"])
 app.include_router(documents.router, prefix="/api", tags=["documents"])
 app.include_router(airbyte_routes.router, prefix="/api", tags=["airbyte"])
 
+from routes import chat
+app.include_router(chat.router, prefix="/api", tags=["chat"])
+
 
 @app.get("/health")
 async def health():

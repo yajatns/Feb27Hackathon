@@ -2,8 +2,11 @@
 
 import json
 import uuid
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from models.database import get_db
 from models.schemas import QueryRequest, QueryResponse
+from routes.chat import save_message
 from integrations.openrouter import openrouter_client
 from integrations.senso import senso_client
 from integrations.senso_policies import search_policies, is_policy_question
@@ -103,9 +106,16 @@ async def _execute_tool(name: str, args: dict) -> dict:
 
 
 @router.post("/query", response_model=QueryResponse)
-async def process_query(request: QueryRequest):
+async def process_query(request: QueryRequest, db: AsyncSession = Depends(get_db)):
     """Process a plain English query using OpenRouter function calling."""
     request_id = str(uuid.uuid4())
+    session_id = getattr(request, 'session_id', None) or request_id
+
+    # Save user message
+    try:
+        await save_message(db, session_id, "user", request.message)
+    except Exception:
+        pass
     tools_used = []
 
     # Route policy questions to Senso first, then augment with LLM reasoning
@@ -175,9 +185,17 @@ async def process_query(request: QueryRequest):
     # Final response
     final_text = msg.get("content", "Processing complete.")
 
+    # Save assistant response
+    try:
+        await save_message(db, session_id, "assistant", final_text,
+                          tools_used=list(set(tools_used)),
+                          reasoning=f"Used {len(tools_used)} tool calls across {len(set(tools_used))} unique tools")
+    except Exception:
+        pass
+
     return QueryResponse(
         response=final_text,
         tools_used=list(set(tools_used)),
         reasoning=f"Used {len(tools_used)} tool calls across {len(set(tools_used))} unique tools",
-        hire_request_id=request_id,
+        hire_request_id=session_id,
     )

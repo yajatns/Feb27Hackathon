@@ -104,8 +104,14 @@ export const api = {
   listHires: (limit = 20) =>
     request<HireRequest[]>(`/api/hires?limit=${limit}`),
 
-  query: (message: string) =>
-    request<QueryResponse>('/api/query', { method: 'POST', body: JSON.stringify({ message }) }),
+  query: (message: string, sessionId?: string) =>
+    request<QueryResponse>('/api/query', { method: 'POST', body: JSON.stringify({ message, session_id: sessionId }) }),
+
+  listChats: () =>
+    request<{ session_id: string; last_message: string; message_count: number; created_at: string }[]>('/api/chats'),
+
+  getChat: (sessionId: string) =>
+    request<{ id: string; role: string; content: string; tools_used: string[]; reasoning: string | null; created_at: string }[]>(`/api/chats/${sessionId}`),
 
   getGraph: (hireRequestId?: string) =>
     request<GraphData>(`/api/graph${hireRequestId ? `?hire_request_id=${hireRequestId}` : ''}`),

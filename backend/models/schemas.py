@@ -43,6 +43,7 @@ class HireRequestResponse(BaseModel):
 
 class QueryRequest(BaseModel):
     message: str = Field(..., examples=["Hire Sarah Chen as Senior Engineer at $150K"])
+    session_id: str | None = Field(None, description="Chat session ID for conversation persistence")
 
 
 class QueryResponse(BaseModel):
