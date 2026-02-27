@@ -8,6 +8,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from models.database import init_db
+from models import db_models  # noqa: F401 — register SQLAlchemy models for create_all
 from integrations.neo4j_client import neo4j_client
 from integrations.openrouter import openrouter_client
 from integrations.senso import senso_client
@@ -36,8 +37,8 @@ async def lifespan(app: FastAPI):
         print("✅ Neo4j connected")
         # Setup schema + constraints
         try:
-            from backend.graph.client import get_neo4j_driver
-            from backend.graph.schema import setup_schema
+            from graph.client import get_neo4j_driver
+            from graph.schema import setup_schema
             driver = await get_neo4j_driver()
             await setup_schema(driver)
             logger.info("Neo4j schema ready")
@@ -58,7 +59,7 @@ async def lifespan(app: FastAPI):
     await yutori_client.close()
     await airbyte_client.close()
     try:
-        from backend.graph.client import close_neo4j_driver
+        from graph.client import close_neo4j_driver
         await close_neo4j_driver()
     except Exception:
         pass

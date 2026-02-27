@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # Database
-    database_url: str = "postgresql+asyncpg://user:pass@localhost:5432/backoffice"
+    database_url: str = "sqlite+aiosqlite:///./backoffice.db"
 
     # Neo4j
     neo4j_uri: str = "bolt://localhost:7687"
