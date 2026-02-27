@@ -25,7 +25,7 @@ class Settings(BaseSettings):
 
     # Base URLs
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
-    openrouter_model: str = "anthropic/claude-sonnet-4-5-20250514"
+    openrouter_model: str = "anthropic/claude-3.5-sonnet"
     senso_base_url: str = "https://apiv2.senso.ai/api/v1"
     reka_base_url: str = "https://vision-agent.api.reka.ai"
     yutori_base_url: str = "https://api.yutori.com/v1"

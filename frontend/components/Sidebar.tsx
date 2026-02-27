@@ -22,8 +22,8 @@ export default function Sidebar() {
             bo
           </div>
           <div>
-            <div className="font-semibold text-sm text-[var(--text-primary)]">backoffice.ai</div>
-            <div className="text-xs text-[var(--text-secondary)]">Alex SaaS Inc</div>
+            <div className="font-semibold text-sm text-[var(--text-primary)]">AlexSaaS</div>
+            <div className="text-xs text-[var(--text-secondary)]">powered by backoffice.ai</div>
           </div>
         </div>
       </div>
