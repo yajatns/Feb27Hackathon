@@ -6,10 +6,19 @@ from app.config import settings
 
 class Neo4jClient:
     def __init__(self):
-        self.uri = settings.neo4j_uri
-        self.user = settings.neo4j_user
-        self.password = settings.neo4j_password
         self._driver = None
+
+    @property
+    def uri(self):
+        return settings.neo4j_uri
+
+    @property
+    def user(self):
+        return settings.neo4j_user
+
+    @property
+    def password(self):
+        return settings.neo4j_password
 
     async def connect(self):
         self._driver = AsyncGraphDatabase.driver(self.uri, auth=(self.user, self.password))
