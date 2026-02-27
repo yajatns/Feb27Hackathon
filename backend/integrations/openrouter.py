@@ -7,10 +7,19 @@ from app.config import settings
 
 class OpenRouterClient:
     def __init__(self):
-        self.base_url = settings.openrouter_base_url
-        self.api_key = settings.openrouter_api_key
-        self.model = settings.openrouter_model
         self.client = httpx.AsyncClient(timeout=120.0)
+
+    @property
+    def api_key(self):
+        return settings.openrouter_api_key
+
+    @property
+    def model(self):
+        return settings.openrouter_model
+
+    @property
+    def base_url(self):
+        return settings.openrouter_base_url
 
     async def chat(self, messages: list[dict], tools: list[dict] | None = None,
                    temperature: float = 0.3, max_tokens: int = 4096) -> dict:
