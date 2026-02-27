@@ -21,7 +21,8 @@ class Neo4jClient:
         return settings.neo4j_password
 
     async def connect(self):
-        self._driver = AsyncGraphDatabase.driver(self.uri, auth=(self.user, self.password))
+        self._driver = AsyncGraphDatabase.driver(
+            settings.neo4j_uri, auth=(settings.neo4j_user, settings.neo4j_password))
         await self._driver.verify_connectivity()
 
     async def close(self):
@@ -29,6 +30,11 @@ class Neo4jClient:
             await self._driver.close()
 
     async def run_query(self, query: str, params: dict | None = None) -> list[dict]:
+        if not self._driver:
+            try:
+                await self.connect()
+            except Exception:
+                return []
         async with self._driver.session() as session:
             result = await session.run(query, params or {})
             return await result.data()
