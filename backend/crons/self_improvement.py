@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 
 from integrations.neo4j_client import neo4j_client
 from integrations.senso import senso_client
+from integrations.senso_policies import add_learned_policy
 
 
 async def run_self_improvement(db_session=None) -> dict:
@@ -56,7 +57,16 @@ async def run_self_improvement(db_session=None) -> dict:
                 "action": "policy_update_recommended",
             }
 
-            # Update Senso policy
+            # Update local policy store (immediate effect on next agent query)
+            learned_key = add_learned_policy(
+                field=field,
+                new_value=', '.join(str(v) for v in latest_values[:3]),
+                reason='; '.join(reasons[:3]) if reasons else f"Pattern detected from {len(group)} overrides",
+                override_count=len(group)
+            )
+            improvement["local_policy_updated"] = learned_key
+
+            # Also try to upload to Senso (best-effort)
             try:
                 policy_text = (
                     f"AUTO-UPDATED POLICY: Based on {len(group)} human overrides, "
@@ -70,7 +80,7 @@ async def run_self_improvement(db_session=None) -> dict:
                     content_type="text/plain")
                 improvement["senso_update"] = "uploaded"
             except Exception as e:
-                improvement["senso_update"] = f"failed: {e}"
+                improvement["senso_update"] = f"failed (using local store): {e}"
 
             improvements.append(improvement)
 
