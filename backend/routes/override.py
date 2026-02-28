@@ -11,6 +11,7 @@ from models.database import get_db
 from models.db_models import HireRequest, UserOverride
 from models.schemas import UserOverrideCreate
 from integrations.neo4j_client import neo4j_client
+from integrations.senso import senso_client
 from integrations.senso_policies import add_learned_policy
 
 router = APIRouter()
@@ -70,13 +71,28 @@ async def create_override(override: UserOverrideCreate, db: AsyncSession = Depen
         except Exception as e:
             neo4j_msg = f"Neo4j error: {str(e)[:100]}"
 
-        # Self-improvement: update local policy store
+        # Self-improvement: update local policy store + Senso
         add_learned_policy(
             field=override.field_overridden,
             new_value=override.new_value,
             reason=override.reason or "Human override",
             override_count=1
         )
+
+        # Upload learned policy to Senso (best-effort)
+        senso_msg = "not attempted"
+        try:
+            policy_text = f"LEARNED POLICY UPDATE: Based on human override, " \
+                         f"{override.field_overridden} for this type of role should be " \
+                         f"{override.new_value}. Reason: {override.reason or 'CEO decision'}. " \
+                         f"Original value was {original}."
+            await senso_client.upload_policy(
+                filename=f"learned_{override.field_overridden}_{hire_id_str[:8]}.txt",
+                content=policy_text.encode(),
+                content_type="text/plain")
+            senso_msg = "Policy uploaded to Senso"
+        except Exception as e:
+            senso_msg = f"Senso upload failed: {str(e)[:80]}"
 
         return {
             "status": "success",
@@ -89,7 +105,8 @@ async def create_override(override: UserOverrideCreate, db: AsyncSession = Depen
             "self_improvement": {
                 "learned": True,
                 "policy_updated": True,
-                "message": f"Override recorded. LEARNED edge in Neo4j. Policy store updated. Next agent query will use learned policy."
+                "senso": senso_msg,
+                "message": f"Override recorded. LEARNED edge in Neo4j. Policy uploaded to Senso. Next agent query will use learned policy."
             }
         }
 
