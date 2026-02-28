@@ -82,12 +82,14 @@ class Neo4jClient:
 
     async def get_full_graph(self, hire_request_id: str | None = None) -> dict:
         if hire_request_id:
+            # Get only edges where at least one node belongs to this hire
+            # Also include Agent nodes that are connected to matching Action nodes
             query = """MATCH (n)-[r]->(m)
-            WHERE n.hire_request_id = $hrid OR m.hire_request_id = $hrid OR n.hire_request_id IS NULL
-            RETURN n, labels(n) as n_labels, r, type(r) as r_type, m, labels(m) as m_labels LIMIT 200"""
+            WHERE n.hire_request_id = $hrid OR m.hire_request_id = $hrid
+            RETURN n, labels(n) as n_labels, r, type(r) as r_type, m, labels(m) as m_labels LIMIT 50"""
             params = {"hrid": hire_request_id}
         else:
-            query = "MATCH (n)-[r]->(m) RETURN n, labels(n) as n_labels, r, type(r) as r_type, m, labels(m) as m_labels LIMIT 200"
+            query = "MATCH (n)-[r]->(m) RETURN n, labels(n) as n_labels, r, type(r) as r_type, m, labels(m) as m_labels LIMIT 50"
             params = {}
         records = await self.run_query(query, params)
         nodes, edges = {}, []
