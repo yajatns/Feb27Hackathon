@@ -37,8 +37,9 @@ async def create_override(override: UserOverrideCreate, db: AsyncSession = Depen
         except Exception:
             pass
 
-        # Get the original hire request
-        result = await db.execute(select(HireRequest).where(HireRequest.id == override.hire_request_id))
+        # Get the original hire request (cast UUID to string for VARCHAR column)
+        hire_id_str = str(override.hire_request_id)
+        result = await db.execute(select(HireRequest).where(HireRequest.id == hire_id_str))
         hire = result.scalar_one_or_none()
         if not hire:
             raise HTTPException(status_code=404, detail="Hire request not found")

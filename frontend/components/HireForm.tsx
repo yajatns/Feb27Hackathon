@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { api, HireRequestCreate, HireRequest, connectStream } from '@/lib/api';
+import { api, HireRequestCreate, HireRequest } from '@/lib/api';
 import AgentPipeline from './AgentPipeline';
 
 const AGENTS = ['Maya (HR)', 'Sam (Finance)', 'Compliance', 'Alex (IT)', 'Aria (Integrations)'];
@@ -30,28 +30,7 @@ export default function HireForm() {
     setSubmitting(true);
     setError('');
     setResult(null);
-    (window as any).__hireStart = Date.now();
     setPipelineSteps(AGENTS.map((name) => ({ name, status: 'pending' as const })));
-
-    // Connect WebSocket for real-time updates
-    let stepIndex = 0;
-    const ws = connectStream((msg) => {
-      if (msg.type === 'agent_start' || msg.type === 'agent_progress') {
-        setPipelineSteps((prev) =>
-          prev.map((s, i) => {
-            if (i === stepIndex) return { ...s, status: 'running', detail: String(msg.data.task || '') };
-            if (i < stepIndex) return { ...s, status: 'done' };
-            return s;
-          })
-        );
-      }
-      if (msg.type === 'agent_complete') {
-        setPipelineSteps((prev) =>
-          prev.map((s, i) => (i === stepIndex ? { ...s, status: 'done' } : s))
-        );
-        stepIndex++;
-      }
-    });
 
     try {
       // Start all agents as pending, then animate through them as the real call runs
@@ -89,7 +68,6 @@ export default function HireForm() {
       );
     } finally {
       setSubmitting(false);
-      ws.close();
     }
   };
 
