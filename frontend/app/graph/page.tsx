@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import GraphViewer from '@/components/GraphViewer';
 import PipelineView from '@/components/PipelineView';
 
-export default function GraphPage() {
+function GraphContent() {
   const [tab, setTab] = useState<'pipeline' | 'graph'>('pipeline');
 
   return (
@@ -16,7 +16,6 @@ export default function GraphPage() {
         </p>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 bg-[var(--bg-secondary)] rounded-lg p-1 w-fit">
         <button
           onClick={() => setTab('pipeline')}
@@ -38,5 +37,13 @@ export default function GraphPage() {
 
       {tab === 'pipeline' ? <PipelineView /> : <GraphViewer />}
     </div>
+  );
+}
+
+export default function GraphPage() {
+  return (
+    <Suspense fallback={<div className="text-sm text-[var(--text-secondary)]">Loading...</div>}>
+      <GraphContent />
+    </Suspense>
   );
 }

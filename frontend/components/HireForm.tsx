@@ -79,6 +79,8 @@ export default function HireForm() {
       const hire = await hirePromise;
       setPipelineSteps((prev) => prev.map((s) => ({ ...s, status: 'done' })));
       setResult(hire);
+      // Auto-navigate to pipeline view after 3 seconds
+      setTimeout(() => router.push(`/graph?hire=${hire.id}`), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit hire request');
       setPipelineSteps((prev) =>

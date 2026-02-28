@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { api, HireRequest } from '@/lib/api';
 
 const agentMeta: Record<string, { emoji: string; color: string; tool: string }> = {
@@ -12,6 +13,8 @@ const agentMeta: Record<string, { emoji: string; color: string; tool: string }> 
 };
 
 export default function PipelineView() {
+  const searchParams = useSearchParams();
+  const hireParam = searchParams.get('hire');
   const [hires, setHires] = useState<HireRequest[]>([]);
   const [selected, setSelected] = useState<HireRequest | null>(null);
   const [loading, setLoading] = useState(true);
@@ -19,9 +22,10 @@ export default function PipelineView() {
   useEffect(() => {
     api.listHires(10).then((h) => {
       setHires(h);
-      if (h.length > 0) setSelected(h[0]);
+      const target = hireParam ? h.find(x => x.id === hireParam) : null;
+      setSelected(target || h[0] || null);
     }).catch(() => {}).finally(() => setLoading(false));
-  }, []);
+  }, [hireParam]);
 
   if (loading) return <div className="text-sm text-[var(--text-secondary)]">Loading pipelines...</div>;
   if (!hires.length) return <div className="text-sm text-[var(--text-secondary)]">No hire requests yet. Submit one from the Hire page.</div>;
