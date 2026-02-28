@@ -191,7 +191,7 @@ export default function HireForm() {
                 </span>
               </div>
               <span className="text-xs text-[var(--text-secondary)] font-mono">
-                {Math.floor((Date.now() - (window as any).__hireStart || 0) / 1000)}s
+                processing
               </span>
             </div>
             <p className="text-xs text-[var(--text-secondary)]">
@@ -208,9 +208,9 @@ export default function HireForm() {
         <div className="space-y-4">
           {/* Navigation */}
           <div className="flex gap-3">
-            <button onClick={() => router.push(`/hire/${result.id}`)}
+            <button onClick={() => router.push(`/graph?hire=${result.id}`)}
               className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition">
-              📋 View Full Pipeline Log
+              📋 View Full Pipeline in Graph
             </button>
             <button onClick={() => { setResult(null); setForm({ ...form, employee_name: '', role: '' }); }}
               className="px-4 py-2 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-sm text-[var(--text-primary)] hover:border-brand-500/50 transition">
