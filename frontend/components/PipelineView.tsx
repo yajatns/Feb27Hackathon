@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { api, HireRequest } from '@/lib/api';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://backoffice-api-ep7k.onrender.com';
+
 const agentMeta: Record<string, { emoji: string; color: string; tool: string }> = {
   Maya: { emoji: '👩‍💼', color: '#6366f1', tool: 'Senso (Policy KB)' },
   Sam: { emoji: '📊', color: '#22c55e', tool: 'Tavily (Market Research)' },
@@ -18,6 +20,34 @@ export default function PipelineView() {
   const [hires, setHires] = useState<HireRequest[]>([]);
   const [selected, setSelected] = useState<HireRequest | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showOverride, setShowOverride] = useState(false);
+  const [overrideValue, setOverrideValue] = useState('');
+  const [overrideReason, setOverrideReason] = useState('');
+  const [overrideStatus, setOverrideStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
+
+  const handleOverride = async () => {
+    if (!selected || !overrideValue) return;
+    setOverrideStatus('sending');
+    try {
+      const resp = await fetch(`${API_BASE}/api/override`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hire_request_id: selected.id,
+          field_overridden: 'salary',
+          new_value: overrideValue,
+          reason: overrideReason || 'CEO salary adjustment',
+        }),
+      });
+      if (resp.ok) {
+        setOverrideStatus('done');
+      } else {
+        setOverrideStatus('error');
+      }
+    } catch {
+      setOverrideStatus('error');
+    }
+  };
 
   useEffect(() => {
     api.listHires(10).then((h) => {
@@ -172,6 +202,70 @@ export default function PipelineView() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* CEO Override */}
+            <div className="ml-5 pl-8 mt-4">
+              {!showOverride ? (
+                <button
+                  onClick={() => { setShowOverride(true); setOverrideStatus('idle'); }}
+                  className="px-4 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm font-medium hover:bg-yellow-500/20 transition"
+                >
+                  👤 CEO Override — Adjust Decision
+                </button>
+              ) : (
+                <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-yellow-400">
+                    👤 CEO Override
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] text-[var(--text-secondary)] uppercase">New Salary ($)</label>
+                      <input
+                        type="number"
+                        value={overrideValue}
+                        onChange={(e) => setOverrideValue(e.target.value)}
+                        placeholder={String(selected.salary)}
+                        className="w-full mt-1 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-yellow-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-[var(--text-secondary)] uppercase">Reason</label>
+                      <input
+                        value={overrideReason}
+                        onChange={(e) => setOverrideReason(e.target.value)}
+                        placeholder="e.g. Need to be more competitive"
+                        className="w-full mt-1 bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-yellow-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleOverride}
+                      disabled={overrideStatus === 'sending' || !overrideValue}
+                      className="px-4 py-2 rounded-lg bg-yellow-500 text-black text-sm font-medium hover:bg-yellow-400 transition disabled:opacity-50"
+                    >
+                      {overrideStatus === 'sending' ? 'Submitting...' : 'Submit Override'}
+                    </button>
+                    <button
+                      onClick={() => setShowOverride(false)}
+                      className="px-4 py-2 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  {overrideStatus === 'done' && (
+                    <div className="text-xs text-green-400 bg-green-500/10 rounded-lg p-2">
+                      ✅ Override recorded! LEARNED edge created in Neo4j. The self-improvement cron will detect this pattern and update Senso policies automatically.
+                    </div>
+                  )}
+                  {overrideStatus === 'error' && (
+                    <div className="text-xs text-red-400 bg-red-500/10 rounded-lg p-2">
+                      ❌ Override failed. Check the API.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
