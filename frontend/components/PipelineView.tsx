@@ -72,7 +72,17 @@ export default function PipelineView() {
                   {selected.role} · {selected.department} · ${selected.salary.toLocaleString()} · {selected.location}
                 </p>
               </div>
-              <span className="text-xs text-[var(--text-secondary)]">{new Date(selected.created_at).toLocaleString()}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] px-2 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
+                  🔵 Powered by Neo4j Aura
+                </span>
+                <span className="text-xs text-[var(--text-secondary)]">{new Date(selected.created_at).toLocaleString()}</span>
+              </div>
+            </div>
+            <div className="mt-2 flex gap-3 text-[10px] text-[var(--text-secondary)]">
+              <span>📊 {selected.tasks.length} delegations traced</span>
+              <span>🔧 {selected.tasks.reduce((n, t) => n + (t.tool_used?.split(',').length || 0), 0)} tool calls logged</span>
+              <span>🧠 Full reasoning chain in Neo4j graph</span>
             </div>
           </div>
 
