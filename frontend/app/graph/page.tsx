@@ -6,6 +6,7 @@ import PipelineView from '@/components/PipelineView';
 
 function GraphContent() {
   const [tab, setTab] = useState<'pipeline' | 'graph'>('pipeline');
+  const [selectedHireId, setSelectedHireId] = useState<string>('');
 
   return (
     <div className="space-y-4">
@@ -31,11 +32,15 @@ function GraphContent() {
             tab === 'graph' ? 'bg-brand-600 text-white' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
           }`}
         >
-          🕸️ Neo4j Graph
+          🕸️ Neo4j Graph {selectedHireId ? '(filtered)' : ''}
         </button>
       </div>
 
-      {tab === 'pipeline' ? <PipelineView /> : <GraphViewer />}
+      {tab === 'pipeline' ? (
+        <PipelineView onSelectHire={(id: string) => setSelectedHireId(id)} />
+      ) : (
+        <GraphViewer defaultFilter={selectedHireId} />
+      )}
     </div>
   );
 }

@@ -14,7 +14,7 @@ const agentMeta: Record<string, { emoji: string; color: string; tool: string }> 
   Aria: { emoji: '🔗', color: '#f97316', tool: 'Airbyte (600+ Connectors)' },
 };
 
-export default function PipelineView() {
+export default function PipelineView({ onSelectHire }: { onSelectHire?: (id: string) => void } = {}) {
   const searchParams = useSearchParams();
   const hireParam = searchParams.get('hire');
   const [hires, setHires] = useState<HireRequest[]>([]);
@@ -53,7 +53,9 @@ export default function PipelineView() {
     api.listHires(10).then((h) => {
       setHires(h);
       const target = hireParam ? h.find(x => x.id === hireParam) : null;
-      setSelected(target || h[0] || null);
+      const pick = target || h[0] || null;
+      setSelected(pick);
+      if (pick && onSelectHire) onSelectHire(pick.id);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [hireParam]);
 
@@ -72,7 +74,7 @@ export default function PipelineView() {
           return (
             <button
               key={h.id}
-              onClick={() => setSelected(h)}
+              onClick={() => { setSelected(h); if (onSelectHire) onSelectHire(h.id); }}
               className={`w-full text-left px-3 py-2.5 rounded-lg border transition text-sm ${
                 selected?.id === h.id
                   ? 'bg-brand-600/15 border-brand-500/30 text-brand-400'

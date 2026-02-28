@@ -24,14 +24,27 @@ interface SelectedNode {
   node: GraphNode;
 }
 
-export default function GraphViewer() {
+export default function GraphViewer({ defaultFilter = '' }: { defaultFilter?: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const networkRef = useRef<unknown>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selected, setSelected] = useState<SelectedNode | null>(null);
-  const [filter, setFilter] = useState('');
+  const [filter, setFilter] = useState(defaultFilter);
   const [graphData, setGraphData] = useState<{ nodes: GraphNode[]; edges: GraphEdge[] }>({ nodes: [], edges: [] });
+  const [autoFiltered, setAutoFiltered] = useState(false);
+
+  // Auto-filter by latest hire if no filter provided
+  useEffect(() => {
+    if (!filter && !autoFiltered) {
+      api.listHires(1).then(hires => {
+        if (hires.length > 0) {
+          setFilter(hires[0].id);
+          setAutoFiltered(true);
+        }
+      }).catch(() => {});
+    }
+  }, [filter, autoFiltered]);
 
   const loadGraph = useCallback(async () => {
     setLoading(true);
