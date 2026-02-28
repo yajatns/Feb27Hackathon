@@ -14,7 +14,7 @@ const agentMeta: Record<string, { emoji: string; color: string; tool: string }> 
   Aria: { emoji: '🔗', color: '#f97316', tool: 'Airbyte (600+ Connectors)' },
 };
 
-export default function PipelineView({ onSelectHire }: { onSelectHire?: (id: string) => void } = {}) {
+export default function PipelineView({ onSelectHire }: { onSelectHire?: (id: string) => void }) {
   const searchParams = useSearchParams();
   const hireParam = searchParams.get('hire');
   const [hires, setHires] = useState<HireRequest[]>([]);
