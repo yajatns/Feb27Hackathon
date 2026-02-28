@@ -54,23 +54,31 @@ export default function HireForm() {
     });
 
     try {
-      // Simulate pipeline progress for demo
+      // Start all agents as pending, then animate through them as the real call runs
+      // The API call takes ~30s (5 agents × ~6s each). Animate progress realistically.
+      const hirePromise = api.hire(form);
+      
+      const agentTimings = [
+        { delay: 2000, label: 'Searching HR policies via Senso...' },
+        { delay: 8000, label: 'Researching salary benchmarks via Tavily...' },
+        { delay: 15000, label: 'Checking compliance & labor laws...' },
+        { delay: 22000, label: 'Provisioning accounts via Yutori...' },
+      ];
+      
       for (let i = 0; i < AGENTS.length; i++) {
+        await new Promise((r) => setTimeout(r, i === 0 ? agentTimings[0].delay : agentTimings[i].delay - agentTimings[i-1].delay));
         setPipelineSteps((prev) =>
           prev.map((s, j) => {
-            if (j === i) return { ...s, status: 'running' };
+            if (j === i) return { ...s, status: 'running', detail: agentTimings[i].label };
             if (j < i) return { ...s, status: 'done' };
             return s;
           })
         );
-        await new Promise((r) => setTimeout(r, 800));
       }
-      setPipelineSteps((prev) => prev.map((s) => ({ ...s, status: 'done' })));
 
-      const hire = await api.hire(form);
+      const hire = await hirePromise;
+      setPipelineSteps((prev) => prev.map((s) => ({ ...s, status: 'done' })));
       setResult(hire);
-      // Auto-redirect to pipeline log after 2 seconds
-      setTimeout(() => router.push(`/hire/${hire.id}`), 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit hire request');
       setPipelineSteps((prev) =>
