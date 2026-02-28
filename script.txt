@@ -1,0 +1,35 @@
+Meet AlexSaaS, powered by backoffice dot AI.
+
+One AI orchestrator that runs your entire back office.
+
+Here's how it works. A CEO says: hire a Senior Engineer at 190 thousand dollars in San Francisco. That's it. One sentence.
+
+The orchestrator — an autonomous AI — decides what to do. It delegates to five specialist agents, each powered by their own LLM with real tools.
+
+Maya, the HR agent, queries Senso — our policy knowledge base — for salary bands and onboarding requirements. She finds the company band is 170 to 210 thousand.
+
+Sam, the Finance agent, pulls real-time market data from Tavily. He checks salary dot com, levels dot fyi, and ZipRecruiter. The market median is 185 thousand. Sam says: approved, 190K is competitive.
+
+The Compliance agent checks San Francisco labor laws and internal policies. All clear.
+
+Alex, the IT agent, provisions accounts through Yutori — automating portals that have no API.
+
+And Aria connects to any system via Airbyte — 600 plus connectors. Notion, Salesforce, Stripe, Jira.
+
+But here's where it gets interesting. Watch what happens with a lowball offer.
+
+Engineering Director. 120 thousand dollars. In San Francisco.
+
+Sam immediately flags it: Critical red flag. 120K is 41 percent below the market median of 204 thousand.
+
+The Compliance agent raises discrimination concerns.
+
+And the orchestrator? It refuses to proceed. It blocks the hire until the salary is adjusted.
+
+That's autonomous decision-making. Not scripted. Not hardcoded. The AI reasons about the data and makes the right call.
+
+And when the CEO overrides a decision — say, bumping a salary to 210K — that correction feeds back through Neo4j into Senso. The agents literally learn from every human decision and get smarter over time.
+
+One AI. Five autonomous agents. Eight real integrations. Zero mocks.
+
+AlexSaaS. Your back office, on autopilot.

@@ -1,8 +1,10 @@
 'use client';
 
-import { Suspense, useState } from 'react';
-import GraphViewer from '@/components/GraphViewer';
+import { Suspense, useState, lazy } from 'react';
 import PipelineView from '@/components/PipelineView';
+
+// Lazy load GraphViewer — it imports vis-network (~300KB) which can crash the page
+const GraphViewer = lazy(() => import('@/components/GraphViewer'));
 
 function GraphContent() {
   const [tab, setTab] = useState<'pipeline' | 'graph'>('pipeline');
@@ -32,14 +34,16 @@ function GraphContent() {
             tab === 'graph' ? 'bg-brand-600 text-white' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
           }`}
         >
-          🕸️ Neo4j Graph {selectedHireId ? '(filtered)' : ''}
+          🕸️ Neo4j Graph
         </button>
       </div>
 
       {tab === 'pipeline' ? (
         <PipelineView onSelectHire={(id: string) => setSelectedHireId(id)} />
       ) : (
-        <GraphViewer defaultFilter={selectedHireId} />
+        <Suspense fallback={<div className="text-sm text-[var(--text-secondary)]">Loading Neo4j graph...</div>}>
+          <GraphViewer defaultFilter={selectedHireId} />
+        </Suspense>
       )}
     </div>
   );
