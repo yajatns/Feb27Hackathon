@@ -29,14 +29,21 @@ class OpenRouterClient:
             payload["tools"] = tools
             payload["tool_choice"] = "auto"
         for attempt in range(3):
-            resp = await self.client.post(
-                f"{self.base_url}/chat/completions",
-                headers={"Authorization": f"Bearer {self.api_key}",
-                         "Content-Type": "application/json",
-                         "HTTP-Referer": "https://backoffice.ai",
-                         "X-Title": "backoffice.ai"},
-                json=payload)
-            resp.raise_for_status()
+            try:
+                resp = await self.client.post(
+                    f"{self.base_url}/chat/completions",
+                    headers={"Authorization": f"Bearer {self.api_key}",
+                             "Content-Type": "application/json",
+                             "HTTP-Referer": "https://backoffice.ai",
+                             "X-Title": "backoffice.ai"},
+                    json=payload)
+                resp.raise_for_status()
+            except Exception:
+                if attempt < 2:
+                    import asyncio
+                    await asyncio.sleep(2 * (attempt + 1))
+                    continue
+                raise
             text = resp.text
             if text and text.strip():
                 import json as _json
