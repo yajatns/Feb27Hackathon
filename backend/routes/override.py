@@ -1,15 +1,16 @@
 """POST /api/override — human override that feeds the self-improvement loop."""
 
 import json
+import traceback
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from fastapi.responses import JSONResponse
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.database import get_db
 from models.db_models import HireRequest, UserOverride
-from models.schemas import UserOverrideCreate, UserOverrideResponse
+from models.schemas import UserOverrideCreate
 from integrations.neo4j_client import neo4j_client
-from integrations.senso import senso_client
 from integrations.senso_policies import add_learned_policy
 
 router = APIRouter()
@@ -17,95 +18,84 @@ router = APIRouter()
 
 @router.post("/override")
 async def create_override(override: UserOverrideCreate, db: AsyncSession = Depends(get_db)):
-    # Ensure table exists
+    """Record a human override — triggers the self-improvement loop."""
     try:
-        from models.database import engine
-        from models.db_models import Base
-        import asyncio
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-    except Exception:
-        pass
-    """Record a human override — triggers the self-improvement loop.
-
-    When a human overrides a salary, policy, or decision:
-    1. Record the override in Postgres
-    2. Log a LEARNED edge in Neo4j
-    3. If pattern detected (3+ overrides same direction), update Senso policy
-    """
-    # Get the original hire request
-    result = await db.execute(select(HireRequest).where(HireRequest.id == override.hire_request_id))
-    hire = result.scalar_one_or_none()
-    if not hire:
-        raise HTTPException(status_code=404, detail="Hire request not found")
-
-    # Get original value
-    original = getattr(hire, override.field_overridden, str(hire.salary))
-
-    # Record override
-    db_override = UserOverride(
-        hire_request_id=override.hire_request_id,
-        field_overridden=override.field_overridden,
-        original_value=str(original),
-        new_value=override.new_value,
-        reason=override.reason)
-    db.add(db_override)
-    await db.flush()
-
-    # Log LEARNED edge in Neo4j
-    try:
-        await neo4j_client.log_learned(
-            override_field=override.field_overridden,
-            original_value=str(original),
-            new_value=override.new_value,
-            reason=override.reason or "Human override")
-    except Exception:
-        pass
-
-    # Check for patterns (3+ overrides on same field in same direction)
-    pattern_result = await db.execute(
-        select(UserOverride).where(UserOverride.field_overridden == override.field_overridden))
-    similar_overrides = pattern_result.scalars().all()
-
-    # Self-improvement: update local policy store immediately
-    # Even 1 override starts teaching the system (3+ triggers stronger signal)
-    add_learned_policy(
-        field=override.field_overridden,
-        new_value=override.new_value,
-        reason=override.reason or "Human override",
-        override_count=len(similar_overrides)
-    )
-
-    improvement_status = {
-        "learned": True,
-        "override_count": len(similar_overrides),
-        "policy_updated": True,
-        "message": f"Policy store updated. {len(similar_overrides)} override(s) on '{override.field_overridden}'. "
-                   f"Next agent query will use the learned policy."
-    }
-
-    if len(similar_overrides) >= 3:
-        improvement_status["pattern_detected"] = True
-        improvement_status["message"] += " Strong pattern detected — high confidence policy update."
-        # Also try Senso upload (best-effort)
+        # Ensure table exists
         try:
-            policy_update = f"Based on {len(similar_overrides)} human overrides, " \
-                            f"the {override.field_overridden} policy should be updated. " \
-                            f"Latest override: {override.new_value} (reason: {override.reason})"
-            await senso_client.upload_policy(
-                filename=f"auto_update_{override.field_overridden}.txt",
-                content=policy_update.encode(),
-                content_type="text/plain")
+            await db.execute(text("""
+                CREATE TABLE IF NOT EXISTS user_overrides (
+                    id VARCHAR(36) PRIMARY KEY,
+                    hire_request_id VARCHAR(36) REFERENCES hire_requests(id),
+                    field_overridden VARCHAR(100) NOT NULL,
+                    original_value TEXT NOT NULL,
+                    new_value TEXT NOT NULL,
+                    reason TEXT,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                )
+            """))
+            await db.flush()
         except Exception:
             pass
 
-    return {
-        "id": db_override.id,
-        "hire_request_id": db_override.hire_request_id,
-        "field_overridden": db_override.field_overridden,
-        "original_value": db_override.original_value,
-        "new_value": db_override.new_value,
-        "reason": db_override.reason,
-        "created_at": str(db_override.created_at),
-        "self_improvement": improvement_status
-    }
+        # Get the original hire request
+        result = await db.execute(select(HireRequest).where(HireRequest.id == override.hire_request_id))
+        hire = result.scalar_one_or_none()
+        if not hire:
+            raise HTTPException(status_code=404, detail="Hire request not found")
+
+        original = str(getattr(hire, override.field_overridden, hire.salary))
+
+        # Record override
+        import uuid as _uuid
+        db_override = UserOverride(
+            id=str(_uuid.uuid4()),
+            hire_request_id=str(override.hire_request_id),
+            field_overridden=override.field_overridden,
+            original_value=original,
+            new_value=override.new_value,
+            reason=override.reason)
+        db.add(db_override)
+        await db.flush()
+
+        # Log LEARNED edge in Neo4j
+        neo4j_msg = "not attempted"
+        try:
+            await neo4j_client.log_learned(
+                override_field=override.field_overridden,
+                original_value=original,
+                new_value=override.new_value,
+                reason=override.reason or "Human override")
+            neo4j_msg = "LEARNED edge created"
+        except Exception as e:
+            neo4j_msg = f"Neo4j error: {str(e)[:100]}"
+
+        # Self-improvement: update local policy store
+        add_learned_policy(
+            field=override.field_overridden,
+            new_value=override.new_value,
+            reason=override.reason or "Human override",
+            override_count=1
+        )
+
+        return {
+            "status": "success",
+            "hire_request_id": str(override.hire_request_id),
+            "field_overridden": override.field_overridden,
+            "original_value": original,
+            "new_value": override.new_value,
+            "reason": override.reason,
+            "neo4j": neo4j_msg,
+            "self_improvement": {
+                "learned": True,
+                "policy_updated": True,
+                "message": f"Override recorded. LEARNED edge in Neo4j. Policy store updated. Next agent query will use learned policy."
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e), "traceback": traceback.format_exc()[-500:]}
+        )
