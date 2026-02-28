@@ -1,10 +1,14 @@
 'use client';
 
-import { Suspense, useState, lazy } from 'react';
+import { Suspense, useState } from 'react';
+import dynamic from 'next/dynamic';
 import PipelineView from '@/components/PipelineView';
 
-// Lazy load GraphViewer — it imports vis-network (~300KB) which can crash the page
-const GraphViewer = lazy(() => import('@/components/GraphViewer'));
+// Use next/dynamic instead of React.lazy for static export compatibility
+const GraphViewer = dynamic(() => import('@/components/GraphViewer'), {
+  ssr: false,
+  loading: () => <div className="text-sm text-[var(--text-secondary)]">Loading Neo4j graph...</div>,
+});
 
 function GraphContent() {
   const [tab, setTab] = useState<'pipeline' | 'graph'>('pipeline');
@@ -41,9 +45,7 @@ function GraphContent() {
       {tab === 'pipeline' ? (
         <PipelineView onSelectHire={(id: string) => setSelectedHireId(id)} />
       ) : (
-        <Suspense fallback={<div className="text-sm text-[var(--text-secondary)]">Loading Neo4j graph...</div>}>
-          <GraphViewer defaultFilter={selectedHireId} />
-        </Suspense>
+        <GraphViewer defaultFilter={selectedHireId} />
       )}
     </div>
   );
