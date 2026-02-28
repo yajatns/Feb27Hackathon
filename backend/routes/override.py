@@ -17,6 +17,15 @@ router = APIRouter()
 
 @router.post("/override")
 async def create_override(override: UserOverrideCreate, db: AsyncSession = Depends(get_db)):
+    # Ensure table exists
+    try:
+        from models.database import engine
+        from models.db_models import Base
+        import asyncio
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception:
+        pass
     """Record a human override — triggers the self-improvement loop.
 
     When a human overrides a salary, policy, or decision:
