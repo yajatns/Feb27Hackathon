@@ -10,11 +10,12 @@ from models.db_models import HireRequest, UserOverride
 from models.schemas import UserOverrideCreate, UserOverrideResponse
 from integrations.neo4j_client import neo4j_client
 from integrations.senso import senso_client
+from integrations.senso_policies import add_learned_policy
 
 router = APIRouter()
 
 
-@router.post("/override", response_model=UserOverrideResponse)
+@router.post("/override")
 async def create_override(override: UserOverrideCreate, db: AsyncSession = Depends(get_db)):
     """Record a human override — triggers the self-improvement loop.
 
@@ -57,8 +58,27 @@ async def create_override(override: UserOverrideCreate, db: AsyncSession = Depen
         select(UserOverride).where(UserOverride.field_overridden == override.field_overridden))
     similar_overrides = pattern_result.scalars().all()
 
+    # Self-improvement: update local policy store immediately
+    # Even 1 override starts teaching the system (3+ triggers stronger signal)
+    add_learned_policy(
+        field=override.field_overridden,
+        new_value=override.new_value,
+        reason=override.reason or "Human override",
+        override_count=len(similar_overrides)
+    )
+
+    improvement_status = {
+        "learned": True,
+        "override_count": len(similar_overrides),
+        "policy_updated": True,
+        "message": f"Policy store updated. {len(similar_overrides)} override(s) on '{override.field_overridden}'. "
+                   f"Next agent query will use the learned policy."
+    }
+
     if len(similar_overrides) >= 3:
-        # Self-improvement: update Senso policy
+        improvement_status["pattern_detected"] = True
+        improvement_status["message"] += " Strong pattern detected — high confidence policy update."
+        # Also try Senso upload (best-effort)
         try:
             policy_update = f"Based on {len(similar_overrides)} human overrides, " \
                             f"the {override.field_overridden} policy should be updated. " \
@@ -70,11 +90,13 @@ async def create_override(override: UserOverrideCreate, db: AsyncSession = Depen
         except Exception:
             pass
 
-    return UserOverrideResponse(
-        id=db_override.id,
-        hire_request_id=db_override.hire_request_id,
-        field_overridden=db_override.field_overridden,
-        original_value=db_override.original_value,
-        new_value=db_override.new_value,
-        reason=db_override.reason,
-        created_at=db_override.created_at)
+    return {
+        "id": db_override.id,
+        "hire_request_id": db_override.hire_request_id,
+        "field_overridden": db_override.field_overridden,
+        "original_value": db_override.original_value,
+        "new_value": db_override.new_value,
+        "reason": db_override.reason,
+        "created_at": str(db_override.created_at),
+        "self_improvement": improvement_status
+    }

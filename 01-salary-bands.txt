@@ -1,0 +1,31 @@
+ALEXSAAS SALARY BANDS POLICY v2.0
+
+SALARY BANDS BY ROLE AND LOCATION:
+
+Senior Engineer:
+- San Francisco: $170,000 - $210,000 (target: $190,000)
+- New York: $165,000 - $200,000 (target: $182,000)
+- Austin: $145,000 - $180,000 (target: $162,000)
+- Remote: $140,000 - $175,000 (target: $157,000)
+
+Engineering Director:
+- San Francisco: $220,000 - $280,000 (target: $250,000)
+- New York: $210,000 - $270,000 (target: $240,000)
+- Austin: $190,000 - $240,000 (target: $215,000)
+
+Product Designer:
+- San Francisco: $150,000 - $190,000 (target: $170,000)
+- New York: $145,000 - $185,000 (target: $165,000)
+
+Product Manager:
+- San Francisco: $160,000 - $200,000 (target: $180,000)
+- New York: $155,000 - $195,000 (target: $175,000)
+
+COMPENSATION RULES:
+1. All offers must be within the defined salary band for the role and location
+2. Offers below the 25th percentile require VP approval
+3. Offers above the 75th percentile require C-suite approval
+4. Cost-of-living adjustments apply when relocating between offices
+5. Equity grants: Senior IC = 0.05-0.1%, Director = 0.1-0.25%, VP+ = 0.25-0.5%
+6. Signing bonuses: Up to 15% of base salary for senior roles
+7. Annual merit increase: 3-8% based on performance rating

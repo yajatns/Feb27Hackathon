@@ -1,0 +1,31 @@
+ALEXSAAS IT ONBOARDING & SECURITY POLICY
+
+ACCOUNT PROVISIONING (Day 1):
+1. Google Workspace account (email, calendar, drive)
+2. Slack account + add to department channels
+3. GitHub organization access + team repos
+4. Jira account + department board
+5. Okta SSO provisioning (all apps via single sign-on)
+6. Notion workspace access
+7. 1Password team vault access
+
+EQUIPMENT STANDARDS:
+- Engineering: MacBook Pro M4 14", 36GB RAM, 1TB SSD
+- Non-engineering: MacBook Air M4, 16GB RAM, 512GB SSD
+- Monitor: LG 27" 4K (optional second monitor for engineering)
+- All laptops enrolled in MDM (Jamf) before distribution
+- All devices require FileVault encryption enabled
+
+SECURITY REQUIREMENTS:
+- MFA required on all accounts (hardware key preferred)
+- VPN required for production system access
+- No company data on personal devices
+- Screen lock: Maximum 5-minute timeout
+- Password policy: 16+ characters, unique per service
+- Phishing simulation training: Quarterly
+
+ACCESS LEVELS BY ROLE:
+- IC Engineer: Team repos, staging environments, monitoring dashboards
+- Senior Engineer: Above + production read access, on-call tools
+- Engineering Director: Above + production write access, billing dashboards
+- VP Engineering: Full admin access
