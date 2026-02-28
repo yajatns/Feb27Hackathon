@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { api, HireRequestCreate, HireRequest, connectStream } from '@/lib/api';
 import AgentPipeline from './AgentPipeline';
 
-const AGENTS = ['Maya (HR)', 'Sam (Finance)', 'Compliance', 'Alex (IT)'];
+const AGENTS = ['Maya (HR)', 'Sam (Finance)', 'Compliance', 'Alex (IT)', 'Aria (Integrations)'];
 
 export default function HireForm() {
   const [form, setForm] = useState<HireRequestCreate>({
@@ -59,10 +59,11 @@ export default function HireForm() {
       const hirePromise = api.hire(form);
       
       const agentTimings = [
-        { delay: 2000, label: 'Searching HR policies via Senso...' },
-        { delay: 8000, label: 'Researching salary benchmarks via Tavily...' },
-        { delay: 15000, label: 'Checking compliance & labor laws...' },
-        { delay: 22000, label: 'Provisioning accounts via Yutori...' },
+        { delay: 2000, label: 'Querying Senso for salary bands & onboarding policy...' },
+        { delay: 8000, label: 'Pulling real-time salary data from Tavily (salary.com, levels.fyi)...' },
+        { delay: 15000, label: 'Checking SF labor laws & internal compliance via Tavily + Senso...' },
+        { delay: 22000, label: 'Automating benefits enrollment & account provisioning via Yutori...' },
+        { delay: 26000, label: 'Syncing employee data to Notion via Airbyte connector...' },
       ];
       
       for (let i = 0; i < AGENTS.length; i++) {
